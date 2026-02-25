@@ -495,12 +495,15 @@
         const { data: invoiceData, error: invoiceError } = await supabaseClient.functions.invoke('blink-proxy', {
           body: {
             action: 'createInvoice',
-            amount: finalPrice,
+            amountSats: finalPrice,
             memo: `SYBA 프리미엄 ${tierLabel} 구독`,
           },
         });
 
-        if (invoiceError || !invoiceData?.paymentRequest) {
+        // Edge Function 응답: { success, data: { paymentHash, paymentRequest, satoshis } }
+        const invoice = invoiceData?.data;
+        if (invoiceError || !invoice?.paymentRequest) {
+          console.error('Invoice error:', invoiceError, invoiceData);
           throw new Error('인보이스 생성 실패');
         }
 
@@ -514,8 +517,8 @@
             original_price_sats: tierPrices[currentTier].price,
             discount_code_id: currentDiscount?.id || null,
             discount_amount_sats: tierPrices[currentTier].price - finalPrice,
-            lightning_invoice: invoiceData.paymentRequest,
-            payment_hash: invoiceData.paymentHash,
+            lightning_invoice: invoice.paymentRequest,
+            payment_hash: invoice.paymentHash,
             status: 'pending',
           })
           .select()
@@ -524,13 +527,13 @@
         if (payError) throw new Error('결제 기록 생성 실패');
 
         currentInvoice = {
-          paymentRequest: invoiceData.paymentRequest,
-          paymentHash: invoiceData.paymentHash,
+          paymentRequest: invoice.paymentRequest,
+          paymentHash: invoice.paymentHash,
           paymentId: payment.id,
         };
 
         // Show QR
-        showQR(invoiceData.paymentRequest);
+        showQR(invoice.paymentRequest);
 
         // Start polling
         pollPayment();
@@ -585,15 +588,15 @@
         }
 
         try {
-          // Check via Blink proxy
+          // Check via Blink proxy (Edge Function 응답: { success, data: 'PAID'|'PENDING'|'EXPIRED' })
           const { data } = await supabaseClient.functions.invoke('blink-proxy', {
             body: {
-              action: 'checkPayment',
+              action: 'checkPaymentStatus',
               paymentRequest: currentInvoice.paymentRequest,
             },
           });
 
-          if (data?.status === 'PAID') {
+          if (data?.data === 'PAID') {
             clearInterval(poll);
             await completePayment();
           }
