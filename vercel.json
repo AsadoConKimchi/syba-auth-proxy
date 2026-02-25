@@ -1,5 +1,6 @@
 {
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/api/lnurl-auth" }
-  ]
+    "rewrites": [
+          { "source": "/subscribe", "destination": "/subscribe.html" },
+          { "source": "/((?!subscribe).*)", "destination": "/api/lnurl-auth" }
+    ]
 }
