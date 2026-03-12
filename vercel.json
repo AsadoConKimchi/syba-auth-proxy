@@ -1,6 +1,3 @@
 {
-  "rewrites": [
-    { "source": "/subscribe", "destination": "/subscribe.html" },
-    { "source": "/((?!subscribe).*)", "destination": "/api/lnurl-auth" }
-  ]
+  "framework": "nextjs"
 }
