@@ -40,8 +40,10 @@ function LoginForm() {
 
     if (res.ok) {
       router.push('/admin/dashboard');
+    } else if (res.status === 500) {
+      setError('서버 설정 오류 — 환경변수를 확인하세요');
     } else {
-      setError('Invalid password');
+      setError('비밀번호가 올바르지 않습니다');
     }
     setLoading(false);
   };

@@ -3,24 +3,29 @@ import { createSession, COOKIE_NAME } from '@/lib/auth';
 
 // 비밀번호 로그인
 export async function POST(req: NextRequest) {
-  const { password } = await req.json();
+  try {
+    const { password } = await req.json();
 
-  if (password !== process.env.ADMIN_PASSWORD) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (password !== process.env.ADMIN_PASSWORD) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const token = await createSession();
+
+    const response = NextResponse.json({ success: true });
+    response.cookies.set(COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60, // 7일
+      path: '/',
+    });
+
+    return response;
+  } catch (error) {
+    console.error('[Admin Auth] Login error:', error);
+    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
   }
-
-  const token = await createSession();
-
-  const response = NextResponse.json({ success: true });
-  response.cookies.set(COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60, // 7일
-    path: '/',
-  });
-
-  return response;
 }
 
 // 토큰 기반 자동 로그인
