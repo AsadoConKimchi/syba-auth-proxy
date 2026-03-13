@@ -24,8 +24,7 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (error) {
     console.error('[Admin Auth] Login error:', error);
-    const message = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ error: 'Server configuration error', detail: message }, { status: 500 });
+    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
   }
 }
 
