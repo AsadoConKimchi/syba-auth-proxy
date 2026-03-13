@@ -5,6 +5,7 @@ const NAV_ITEMS = [
   { href: '/admin/users', label: 'Users', icon: '👤' },
   { href: '/admin/tickets', label: 'Tickets', icon: '🎫' },
   { href: '/admin/payments', label: 'Payments', icon: '⚡' },
+  { href: '/admin/promo-codes', label: 'Promo Codes', icon: '🎟️' },
 ];
 
 // 공유 사이드바 레이아웃 — 인증(requireAuth)은 각 layout.tsx에서 호출
