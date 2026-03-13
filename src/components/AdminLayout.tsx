@@ -5,6 +5,7 @@ const NAV_ITEMS = [
   { href: '/admin/users', label: '사용자', icon: '👤' },
   { href: '/admin/tickets', label: '티켓', icon: '🎫' },
   { href: '/admin/payments', label: '결제', icon: '⚡' },
+  { href: '/admin/analytics', label: '매출 분석', icon: '📈' },
   { href: '/admin/promo-codes', label: '프로모션 코드', icon: '🎟️' },
 ];
 
