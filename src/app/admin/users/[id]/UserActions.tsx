@@ -18,16 +18,16 @@ export default function UserActions({ userId, currentStatus }: UserActionsProps)
     startTransition(async () => {
       const result = await action();
       if (result.success) {
-        setMessage({ type: 'success', text: 'Action completed successfully.' });
+        setMessage({ type: 'success', text: '처리가 완료되었습니다.' });
       } else {
-        setMessage({ type: 'error', text: result.error ?? 'Something went wrong.' });
+        setMessage({ type: 'error', text: result.error ?? '오류가 발생했습니다.' });
       }
     });
   }
 
   return (
     <div>
-      <p className="text-xs text-gray-500 mb-3">Manage Subscription</p>
+      <p className="text-xs text-gray-500 mb-3">구독 관리</p>
 
       <div className="flex flex-wrap gap-2">
         {/* 구독 연장 (30일) */}
@@ -36,7 +36,7 @@ export default function UserActions({ userId, currentStatus }: UserActionsProps)
           onClick={() => handleAction(() => extendSubscription(userId, 30))}
           className="px-3 py-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 text-xs font-medium"
         >
-          {isPending ? '...' : 'Extend 30d'}
+          {isPending ? '...' : '30일 연장'}
         </button>
 
         {/* 구독 활성화 */}
@@ -46,22 +46,22 @@ export default function UserActions({ userId, currentStatus }: UserActionsProps)
             onClick={() => handleAction(() => activateSubscription(userId, 'premium'))}
             className="px-3 py-1.5 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50 text-xs font-medium"
           >
-            {isPending ? '...' : 'Activate'}
+            {isPending ? '...' : '활성화'}
           </button>
         )}
 
-        {/* 구독 취소 */}
+        {/* 구독 해지 */}
         {currentStatus === 'active' && (
           <button
             disabled={isPending}
             onClick={() => {
-              if (confirm('Are you sure you want to revoke this subscription?')) {
+              if (confirm('이 사용자의 구독을 해지하시겠습니까?')) {
                 handleAction(() => revokeSubscription(userId));
               }
             }}
             className="px-3 py-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 disabled:opacity-50 text-xs font-medium"
           >
-            {isPending ? '...' : 'Revoke'}
+            {isPending ? '...' : '해지'}
           </button>
         )}
       </div>

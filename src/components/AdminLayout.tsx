@@ -1,11 +1,11 @@
 import Link from 'next/link';
 
 const NAV_ITEMS = [
-  { href: '/admin/dashboard', label: 'Dashboard', icon: '📊' },
-  { href: '/admin/users', label: 'Users', icon: '👤' },
-  { href: '/admin/tickets', label: 'Tickets', icon: '🎫' },
-  { href: '/admin/payments', label: 'Payments', icon: '⚡' },
-  { href: '/admin/promo-codes', label: 'Promo Codes', icon: '🎟️' },
+  { href: '/admin/dashboard', label: '대시보드', icon: '📊' },
+  { href: '/admin/users', label: '사용자', icon: '👤' },
+  { href: '/admin/tickets', label: '티켓', icon: '🎫' },
+  { href: '/admin/payments', label: '결제', icon: '⚡' },
+  { href: '/admin/promo-codes', label: '프로모션 코드', icon: '🎟️' },
 ];
 
 // 공유 사이드바 레이아웃 — 인증(requireAuth)은 각 layout.tsx에서 호출

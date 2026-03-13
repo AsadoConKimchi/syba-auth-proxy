@@ -24,6 +24,12 @@ const STATUS_COLORS: Record<string, string> = {
   expired: 'bg-gray-100 text-gray-600',
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  pending: '대기',
+  paid: '완료',
+  expired: '만료',
+};
+
 function formatDate(dateStr: string | null) {
   if (!dateStr) return '-';
   return new Date(dateStr).toLocaleDateString('ko-KR', {
@@ -37,9 +43,8 @@ function formatDate(dateStr: string | null) {
 function daysAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  if (days === 0) return 'today';
-  if (days === 1) return '1 day ago';
-  return `${days} days ago`;
+  if (days === 0) return '오늘';
+  return `${days}일 전`;
 }
 
 interface Props {
@@ -49,7 +54,19 @@ interface Props {
 }
 
 const STATUS_OPTIONS = ['all', 'pending', 'paid', 'expired'] as const;
+const STATUS_FILTER_LABELS: Record<string, string> = {
+  all: '전체',
+  pending: '대기',
+  paid: '완료',
+  expired: '만료',
+};
 const TIER_OPTIONS = ['all', 'monthly', 'annual', 'lifetime'] as const;
+const TIER_LABELS: Record<string, string> = {
+  all: '전체',
+  monthly: '월간',
+  annual: '연간',
+  lifetime: '평생',
+};
 
 export default function PaymentsTable({ payments: initialPayments, statusFilter, tierFilter }: Props) {
   const router = useRouter();
@@ -98,7 +115,7 @@ export default function PaymentsTable({ payments: initialPayments, statusFilter,
       setSelected(new Set());
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to expire');
+      setError(err instanceof Error ? err.message : '만료 처리 실패');
     } finally {
       setLoading(false);
     }
@@ -120,7 +137,7 @@ export default function PaymentsTable({ payments: initialPayments, statusFilter,
       setSelected(new Set());
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete');
+      setError(err instanceof Error ? err.message : '삭제 실패');
     } finally {
       setLoading(false);
     }
@@ -145,9 +162,9 @@ export default function PaymentsTable({ payments: initialPayments, statusFilter,
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Payments</h1>
+        <h1 className="text-2xl font-bold">결제 관리</h1>
         <div className="text-sm text-gray-500">
-          {paidCount} paid / {payments.length} total
+          완료 {paidCount}건 / 전체 {payments.length}건
           {paidCount > 0 && (
             <span className="ml-2 font-medium text-gray-700">
               ({totalSats.toLocaleString()} sats)
@@ -160,7 +177,7 @@ export default function PaymentsTable({ payments: initialPayments, statusFilter,
         <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
           {error}
           <button onClick={() => setError(null)} className="ml-2 font-medium hover:underline">
-            dismiss
+            닫기
           </button>
         </div>
       )}
@@ -168,7 +185,7 @@ export default function PaymentsTable({ payments: initialPayments, statusFilter,
       {/* 필터 */}
       <div className="flex flex-wrap gap-6 mb-6">
         <div>
-          <span className="text-xs text-gray-400 block mb-1.5">Status</span>
+          <span className="text-xs text-gray-400 block mb-1.5">상태</span>
           <div className="flex gap-1.5">
             {STATUS_OPTIONS.map((status) => (
               <Link
@@ -180,13 +197,13 @@ export default function PaymentsTable({ payments: initialPayments, statusFilter,
                     : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                 }`}
               >
-                {status === 'all' ? 'All' : status}
+                {STATUS_FILTER_LABELS[status]}
               </Link>
             ))}
           </div>
         </div>
         <div>
-          <span className="text-xs text-gray-400 block mb-1.5">Tier</span>
+          <span className="text-xs text-gray-400 block mb-1.5">티어</span>
           <div className="flex gap-1.5">
             {TIER_OPTIONS.map((tier) => (
               <Link
@@ -198,7 +215,7 @@ export default function PaymentsTable({ payments: initialPayments, statusFilter,
                     : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                 }`}
               >
-                {tier === 'all' ? 'All' : tier}
+                {TIER_LABELS[tier]}
               </Link>
             ))}
           </div>
@@ -249,14 +266,14 @@ export default function PaymentsTable({ payments: initialPayments, statusFilter,
                   />
                 )}
               </th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">User</th>
-              <th className="text-right px-4 py-3 font-medium text-gray-500">Amount (sats)</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Tier</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Status</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Discount</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Created</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Paid</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Actions</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-500">사용자</th>
+              <th className="text-right px-4 py-3 font-medium text-gray-500">금액 (sats)</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-500">티어</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-500">상태</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-500">할인</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-500">생성일</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-500">결제일</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-500">관리</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -286,7 +303,7 @@ export default function PaymentsTable({ payments: initialPayments, statusFilter,
                         STATUS_COLORS[payment.status] || 'bg-gray-100 text-gray-600'
                       }`}
                     >
-                      {payment.status}
+                      {STATUS_LABELS[payment.status] || payment.status}
                     </span>
                     {payment.status === 'pending' && (
                       <span className="ml-1 text-xs text-gray-400">
@@ -320,14 +337,14 @@ export default function PaymentsTable({ payments: initialPayments, statusFilter,
                           disabled={loading}
                           className="px-2 py-1 text-xs text-yellow-700 bg-yellow-50 rounded hover:bg-yellow-100 disabled:opacity-50 transition-colors"
                         >
-                          Expire
+                          만료
                         </button>
                         <button
                           onClick={() => handleDelete([payment.id])}
                           disabled={loading}
                           className="px-2 py-1 text-xs text-red-700 bg-red-50 rounded hover:bg-red-100 disabled:opacity-50 transition-colors"
                         >
-                          Delete
+                          삭제
                         </button>
                       </div>
                     )}
@@ -337,7 +354,7 @@ export default function PaymentsTable({ payments: initialPayments, statusFilter,
             ) : (
               <tr>
                 <td colSpan={9} className="px-4 py-12 text-center text-gray-400">
-                  No payments found
+                  결제 내역이 없습니다
                 </td>
               </tr>
             )}

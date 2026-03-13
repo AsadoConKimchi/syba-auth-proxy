@@ -11,11 +11,27 @@ const STATUS_COLORS: Record<string, string> = {
   closed: 'bg-gray-100 text-gray-600',
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  all: '전체',
+  open: '신규',
+  in_progress: '처리중',
+  waiting_user: '사용자 대기',
+  resolved: '해결',
+  closed: '종료',
+};
+
 const PRIORITY_COLORS: Record<string, string> = {
   low: 'text-gray-500',
   medium: 'text-yellow-600',
   high: 'text-orange-600',
   urgent: 'text-red-600 font-bold',
+};
+
+const PRIORITY_LABELS: Record<string, string> = {
+  low: '낮음',
+  medium: '보통',
+  high: '높음',
+  urgent: '긴급',
 };
 
 function formatDate(dateStr: string | null) {
@@ -68,7 +84,7 @@ export default async function TicketsPage({
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Tickets</h1>
+      <h1 className="text-2xl font-bold mb-6">티켓 관리</h1>
 
       {/* 상태 필터 */}
       <div className="flex gap-2 mb-6">
@@ -82,7 +98,7 @@ export default async function TicketsPage({
                 : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
             }`}
           >
-            {status === 'all' ? 'All' : status.replace(/_/g, ' ')}
+            {STATUS_LABELS[status] || status}
           </Link>
         ))}
       </div>
@@ -92,13 +108,13 @@ export default async function TicketsPage({
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b">
             <tr>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Status</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Priority</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Category</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Subject</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">User</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Updated</th>
-              <th className="text-center px-4 py-3 font-medium text-gray-500">Messages</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-500">상태</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-500">우선순위</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-500">카테고리</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-500">제목</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-500">사용자</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-500">수정일</th>
+              <th className="text-center px-4 py-3 font-medium text-gray-500">메시지</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -112,14 +128,14 @@ export default async function TicketsPage({
                           STATUS_COLORS[ticket.status] || 'bg-gray-100 text-gray-600'
                         }`}
                       >
-                        {ticket.status.replace(/_/g, ' ')}
+                        {STATUS_LABELS[ticket.status] || ticket.status}
                       </span>
                     </Link>
                   </td>
                   <td className="px-4 py-3">
                     <Link href={`/admin/tickets/${ticket.id}`} className="block">
                       <span className={`text-xs ${PRIORITY_COLORS[ticket.priority] || 'text-gray-500'}`}>
-                        {ticket.priority}
+                        {PRIORITY_LABELS[ticket.priority] || ticket.priority}
                       </span>
                     </Link>
                   </td>
@@ -153,7 +169,7 @@ export default async function TicketsPage({
             ) : (
               <tr>
                 <td colSpan={7} className="px-4 py-12 text-center text-gray-400">
-                  No tickets found
+                  티켓이 없습니다
                 </td>
               </tr>
             )}

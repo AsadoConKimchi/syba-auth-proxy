@@ -34,7 +34,12 @@ function isExpired(validUntil: string | null) {
   return new Date(validUntil) < new Date();
 }
 
-export default function PromoCodesClient({ initialCodes }: { initialCodes: DiscountCode[] }) {
+interface Props {
+  initialCodes: DiscountCode[];
+  usageMap: Record<string, number>;
+}
+
+export default function PromoCodesClient({ initialCodes, usageMap }: Props) {
   const router = useRouter();
   const [codes, setCodes] = useState(initialCodes);
   const [showForm, setShowForm] = useState(false);
@@ -90,8 +95,9 @@ export default function PromoCodesClient({ initialCodes }: { initialCodes: Disco
         applicable_tiers: ['monthly', 'annual', 'lifetime'],
         description: '',
       });
+      router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create code');
+      setError(err instanceof Error ? err.message : '코드 생성 실패');
     } finally {
       setLoading(false);
     }
@@ -110,7 +116,7 @@ export default function PromoCodesClient({ initialCodes }: { initialCodes: Disco
 
       setCodes(codes.map((c) => (c.id === id ? data.code : c)));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to toggle');
+      setError(err instanceof Error ? err.message : '상태 변경 실패');
     }
   }
 
@@ -136,7 +142,7 @@ export default function PromoCodesClient({ initialCodes }: { initialCodes: Disco
       setCodes(codes.map((c) => (c.id === id ? data.code : c)));
       setEditingId(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update');
+      setError(err instanceof Error ? err.message : '수정 실패');
     } finally {
       setLoading(false);
     }
@@ -163,12 +169,12 @@ export default function PromoCodesClient({ initialCodes }: { initialCodes: Disco
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Promo Codes</h1>
+        <h1 className="text-2xl font-bold">프로모션 코드</h1>
         <button
           onClick={() => setShowForm(!showForm)}
           className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors"
         >
-          {showForm ? 'Cancel' : '+ New Code'}
+          {showForm ? '취소' : '+ 새 코드'}
         </button>
       </div>
 
@@ -176,7 +182,7 @@ export default function PromoCodesClient({ initialCodes }: { initialCodes: Disco
         <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
           {error}
           <button onClick={() => setError(null)} className="ml-2 font-medium hover:underline">
-            dismiss
+            닫기
           </button>
         </div>
       )}
@@ -186,7 +192,7 @@ export default function PromoCodesClient({ initialCodes }: { initialCodes: Disco
         <form onSubmit={handleCreate} className="mb-6 p-4 bg-white rounded-lg shadow border">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Code</label>
+              <label className="block text-xs text-gray-500 mb-1">코드</label>
               <input
                 type="text"
                 value={form.code}
@@ -197,19 +203,19 @@ export default function PromoCodesClient({ initialCodes }: { initialCodes: Disco
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Type</label>
+              <label className="block text-xs text-gray-500 mb-1">할인 유형</label>
               <select
                 value={form.discount_type}
                 onChange={(e) => setForm({ ...form, discount_type: e.target.value as 'percent' | 'fixed' })}
                 className="w-full px-3 py-2 border rounded-md text-sm"
               >
-                <option value="percent">Percent (%)</option>
-                <option value="fixed">Fixed (sats)</option>
+                <option value="percent">비율 (%)</option>
+                <option value="fixed">고정 (sats)</option>
               </select>
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">
-                Value {form.discount_type === 'percent' ? '(%)' : '(sats)'}
+                할인값 {form.discount_type === 'percent' ? '(%)' : '(sats)'}
               </label>
               <input
                 type="number"
@@ -221,7 +227,7 @@ export default function PromoCodesClient({ initialCodes }: { initialCodes: Disco
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Max Uses (-1 = unlimited)</label>
+              <label className="block text-xs text-gray-500 mb-1">최대 사용 횟수 (-1 = 무제한)</label>
               <input
                 type="number"
                 value={form.max_uses}
@@ -231,7 +237,7 @@ export default function PromoCodesClient({ initialCodes }: { initialCodes: Disco
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Valid Until (optional)</label>
+              <label className="block text-xs text-gray-500 mb-1">유효기한 (선택)</label>
               <input
                 type="date"
                 value={form.valid_until}
@@ -240,7 +246,7 @@ export default function PromoCodesClient({ initialCodes }: { initialCodes: Disco
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Applicable Tiers</label>
+              <label className="block text-xs text-gray-500 mb-1">적용 티어</label>
               <div className="flex gap-3 mt-1">
                 {TIER_OPTIONS.map((tier) => (
                   <label key={tier} className="flex items-center gap-1 text-sm">
@@ -256,13 +262,13 @@ export default function PromoCodesClient({ initialCodes }: { initialCodes: Disco
               </div>
             </div>
             <div className="col-span-2">
-              <label className="block text-xs text-gray-500 mb-1">Description (optional)</label>
+              <label className="block text-xs text-gray-500 mb-1">설명 (선택)</label>
               <input
                 type="text"
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 className="w-full px-3 py-2 border rounded-md text-sm"
-                placeholder="Internal note about this promo code"
+                placeholder="프로모션 코드에 대한 내부 메모"
               />
             </div>
           </div>
@@ -272,7 +278,7 @@ export default function PromoCodesClient({ initialCodes }: { initialCodes: Disco
               disabled={loading}
               className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-50 transition-colors"
             >
-              {loading ? 'Creating...' : 'Create Code'}
+              {loading ? '생성 중...' : '코드 생성'}
             </button>
           </div>
         </form>
@@ -283,14 +289,14 @@ export default function PromoCodesClient({ initialCodes }: { initialCodes: Disco
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b">
             <tr>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Code</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Type</th>
-              <th className="text-right px-4 py-3 font-medium text-gray-500">Value</th>
-              <th className="text-right px-4 py-3 font-medium text-gray-500">Uses</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Valid Until</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Tiers</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Status</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Actions</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-500">코드</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-500">유형</th>
+              <th className="text-right px-4 py-3 font-medium text-gray-500">할인값</th>
+              <th className="text-right px-4 py-3 font-medium text-gray-500">사용량</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-500">유효기한</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-500">적용 티어</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-500">상태</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-500">관리</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -298,6 +304,7 @@ export default function PromoCodesClient({ initialCodes }: { initialCodes: Disco
               codes.map((code) => {
                 const expired = isExpired(code.valid_until);
                 const rowClass = expired || !code.is_active ? 'opacity-50' : '';
+                const actualUses = usageMap[code.id] || 0;
 
                 return (
                   <tr key={code.id} className={`hover:bg-gray-50 transition-colors ${rowClass}`}>
@@ -316,14 +323,14 @@ export default function PromoCodesClient({ initialCodes }: { initialCodes: Disco
                         : code.discount_value.toLocaleString()}
                     </td>
                     <td className="px-4 py-3 text-right font-mono">
-                      {code.current_uses}
+                      {actualUses}
                       <span className="text-gray-400">
                         /{code.max_uses === -1 ? '∞' : code.max_uses}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">
                       {formatDate(code.valid_until)}
-                      {expired && <span className="ml-1 text-red-500">(expired)</span>}
+                      {expired && <span className="ml-1 text-red-500">(만료됨)</span>}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1">
@@ -346,7 +353,7 @@ export default function PromoCodesClient({ initialCodes }: { initialCodes: Disco
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                       >
-                        {code.is_active ? 'active' : 'inactive'}
+                        {code.is_active ? '활성' : '비활성'}
                       </button>
                     </td>
                     <td className="px-4 py-3">
@@ -357,7 +364,7 @@ export default function PromoCodesClient({ initialCodes }: { initialCodes: Disco
                             value={editForm.valid_until}
                             onChange={(e) => setEditForm({ ...editForm, valid_until: e.target.value })}
                             className="px-2 py-1 border rounded text-xs"
-                            placeholder="Valid until"
+                            placeholder="유효기한"
                           />
                           <input
                             type="number"
@@ -365,14 +372,14 @@ export default function PromoCodesClient({ initialCodes }: { initialCodes: Disco
                             onChange={(e) => setEditForm({ ...editForm, max_uses: Number(e.target.value) })}
                             className="px-2 py-1 border rounded text-xs"
                             min={-1}
-                            placeholder="Max uses"
+                            placeholder="최대 사용 횟수"
                           />
                           <input
                             type="text"
                             value={editForm.description}
                             onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                             className="px-2 py-1 border rounded text-xs"
-                            placeholder="Description"
+                            placeholder="설명"
                           />
                           <div className="flex gap-1">
                             <button
@@ -380,13 +387,13 @@ export default function PromoCodesClient({ initialCodes }: { initialCodes: Disco
                               disabled={loading}
                               className="px-2 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600 disabled:opacity-50"
                             >
-                              Save
+                              저장
                             </button>
                             <button
                               onClick={() => setEditingId(null)}
                               className="px-2 py-1 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300"
                             >
-                              Cancel
+                              취소
                             </button>
                           </div>
                         </div>
@@ -395,7 +402,7 @@ export default function PromoCodesClient({ initialCodes }: { initialCodes: Disco
                           onClick={() => startEditing(code)}
                           className="text-xs text-orange-600 hover:underline"
                         >
-                          Edit
+                          수정
                         </button>
                       )}
                     </td>
@@ -405,7 +412,7 @@ export default function PromoCodesClient({ initialCodes }: { initialCodes: Disco
             ) : (
               <tr>
                 <td colSpan={8} className="px-4 py-12 text-center text-gray-400">
-                  No promo codes found
+                  프로모션 코드가 없습니다
                 </td>
               </tr>
             )}

@@ -14,6 +14,21 @@ const STATUS_COLORS: Record<string, string> = {
   closed: 'bg-gray-100 text-gray-600',
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  open: '신규',
+  in_progress: '처리중',
+  waiting_user: '사용자 대기',
+  resolved: '해결',
+  closed: '종료',
+};
+
+const PRIORITY_LABELS: Record<string, string> = {
+  low: '낮음',
+  medium: '보통',
+  high: '높음',
+  urgent: '긴급',
+};
+
 function formatDate(dateStr: string | null) {
   if (!dateStr) return '-';
   return new Date(dateStr).toLocaleDateString('ko-KR', {
@@ -101,7 +116,7 @@ export default async function TicketDetailPage({
         href="/admin/tickets"
         className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4"
       >
-        &larr; Back to tickets
+        &larr; 티켓 목록으로
       </Link>
 
       {/* 티켓 헤더 */}
@@ -122,23 +137,23 @@ export default async function TicketDetailPage({
               STATUS_COLORS[ticket.status] || 'bg-gray-100 text-gray-600'
             }`}
           >
-            {ticket.status.replace(/_/g, ' ')}
+            {STATUS_LABELS[ticket.status] || ticket.status}
           </span>
         </div>
 
         <div className="flex gap-6 text-xs text-gray-400">
-          <span>Created: {formatDate(ticket.created_at)}</span>
-          <span>Updated: {formatDate(ticket.updated_at)}</span>
-          {ticket.resolved_at && <span>Resolved: {formatDate(ticket.resolved_at)}</span>}
+          <span>생성: {formatDate(ticket.created_at)}</span>
+          <span>수정: {formatDate(ticket.updated_at)}</span>
+          {ticket.resolved_at && <span>해결: {formatDate(ticket.resolved_at)}</span>}
         </div>
       </div>
 
       {/* 상태/우선순위 변경 */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="font-semibold mb-3 text-sm">Update Status</h2>
+        <h2 className="font-semibold mb-3 text-sm">상태 변경</h2>
         <form action={updateTicket} className="flex items-end gap-4">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Status</label>
+            <label className="block text-xs text-gray-500 mb-1">상태</label>
             <select
               name="status"
               defaultValue={ticket.status}
@@ -146,13 +161,13 @@ export default async function TicketDetailPage({
             >
               {STATUS_OPTIONS.map((s) => (
                 <option key={s} value={s}>
-                  {s.replace(/_/g, ' ')}
+                  {STATUS_LABELS[s] || s}
                 </option>
               ))}
             </select>
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Priority</label>
+            <label className="block text-xs text-gray-500 mb-1">우선순위</label>
             <select
               name="priority"
               defaultValue={ticket.priority}
@@ -160,7 +175,7 @@ export default async function TicketDetailPage({
             >
               {PRIORITY_OPTIONS.map((p) => (
                 <option key={p} value={p}>
-                  {p}
+                  {PRIORITY_LABELS[p] || p}
                 </option>
               ))}
             </select>
@@ -169,14 +184,14 @@ export default async function TicketDetailPage({
             type="submit"
             className="bg-gray-900 text-white px-4 py-1.5 rounded-md text-sm hover:bg-gray-800 transition-colors"
           >
-            Update
+            변경
           </button>
         </form>
       </div>
 
       {/* 메시지 스레드 */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="font-semibold mb-4 text-sm">Messages ({messages?.length || 0})</h2>
+        <h2 className="font-semibold mb-4 text-sm">메시지 ({messages?.length || 0})</h2>
         <div className="space-y-4">
           {messages && messages.length > 0 ? (
             messages.map((msg) => {
@@ -195,7 +210,7 @@ export default async function TicketDetailPage({
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <span className={`text-xs font-medium ${isAdmin ? 'text-gray-300' : 'text-gray-500'}`}>
-                        {isAdmin ? 'Admin' : 'User'}
+                        {isAdmin ? '관리자' : '사용자'}
                       </span>
                       <span className={`text-xs ${isAdmin ? 'text-gray-400' : 'text-gray-400'}`}>
                         {formatDate(msg.created_at)}
@@ -207,7 +222,7 @@ export default async function TicketDetailPage({
               );
             })
           ) : (
-            <p className="text-center text-gray-400 py-4">No messages yet</p>
+            <p className="text-center text-gray-400 py-4">메시지가 없습니다</p>
           )}
         </div>
       </div>
@@ -215,13 +230,13 @@ export default async function TicketDetailPage({
       {/* 관리자 답변 폼 */}
       {ticket.status !== 'closed' && (
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="font-semibold mb-3 text-sm">Reply</h2>
+          <h2 className="font-semibold mb-3 text-sm">답변</h2>
           <form action={sendReply}>
             <textarea
               name="message"
               rows={4}
               required
-              placeholder="Type your reply..."
+              placeholder="답변을 입력하세요..."
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
             />
             <div className="flex justify-end mt-3">
@@ -229,7 +244,7 @@ export default async function TicketDetailPage({
                 type="submit"
                 className="bg-gray-900 text-white px-5 py-2 rounded-md text-sm hover:bg-gray-800 transition-colors"
               >
-                Send Reply
+                답변 전송
               </button>
             </div>
           </form>

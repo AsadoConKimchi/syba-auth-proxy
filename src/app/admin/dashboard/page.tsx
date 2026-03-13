@@ -61,24 +61,24 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+      <h1 className="text-2xl font-bold mb-6">대시보드</h1>
 
       {/* 핵심 지표 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <MetricCard title="Total Users" value={totalUsers ?? 0} />
-        <MetricCard title="Active Subscribers" value={activeSubscribers ?? 0} />
+        <MetricCard title="전체 사용자" value={totalUsers ?? 0} />
+        <MetricCard title="활성 구독자" value={activeSubscribers ?? 0} />
         <MetricCard
-          title="Monthly Revenue"
+          title="이번 달 수익"
           value={`${monthlyRevenue.toLocaleString()} sats`}
           sub={new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })}
         />
-        <MetricCard title="Open Tickets" value={openTickets ?? 0} />
+        <MetricCard title="미처리 티켓" value={openTickets ?? 0} />
       </div>
 
       {/* 최근 결제 */}
       <div className="bg-white rounded-lg shadow">
         <div className="px-6 py-4 border-b">
-          <h2 className="font-semibold">Recent Payments</h2>
+          <h2 className="font-semibold">최근 결제</h2>
         </div>
         <div className="divide-y">
           {recentPayments?.map((p) => (
@@ -90,12 +90,12 @@ export default async function DashboardPage() {
               <div className="text-right">
                 <span className="font-medium">{p.amount_sats.toLocaleString()} sats</span>
                 <span className="ml-2 text-gray-400 text-xs">
-                  {p.paid_at ? new Date(p.paid_at).toLocaleDateString() : ''}
+                  {p.paid_at ? new Date(p.paid_at).toLocaleDateString('ko-KR') : ''}
                 </span>
               </div>
             </div>
           )) ?? (
-            <div className="px-6 py-8 text-center text-gray-400">No payments yet</div>
+            <div className="px-6 py-8 text-center text-gray-400">결제 내역이 없습니다</div>
           )}
         </div>
       </div>
