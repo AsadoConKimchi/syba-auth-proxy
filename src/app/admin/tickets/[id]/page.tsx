@@ -189,6 +189,78 @@ export default async function TicketDetailPage({
         </form>
       </div>
 
+      {/* 진단 데이터 */}
+      {ticket.diagnostic_data && (
+        <details className="bg-white rounded-lg shadow mb-6">
+          <summary className="p-6 cursor-pointer font-semibold text-sm hover:bg-gray-50 rounded-lg">
+            진단 데이터
+          </summary>
+          <div className="px-6 pb-6">
+            <table className="w-full text-sm">
+              <tbody>
+                {/* 앱 정보 */}
+                {(ticket.diagnostic_data as any).app && (
+                  <>
+                    <tr className="border-t">
+                      <td className="py-2 pr-4 font-medium text-gray-500 whitespace-nowrap">앱 버전</td>
+                      <td className="py-2">{(ticket.diagnostic_data as any).app.version}</td>
+                    </tr>
+                    <tr className="border-t">
+                      <td className="py-2 pr-4 font-medium text-gray-500 whitespace-nowrap">플랫폼</td>
+                      <td className="py-2">{(ticket.diagnostic_data as any).app.platform}</td>
+                    </tr>
+                    <tr className="border-t">
+                      <td className="py-2 pr-4 font-medium text-gray-500 whitespace-nowrap">OS</td>
+                      <td className="py-2">{(ticket.diagnostic_data as any).app.osVersion}</td>
+                    </tr>
+                  </>
+                )}
+                {/* 데이터 건수 */}
+                {(ticket.diagnostic_data as any).dataCounts && (
+                  <>
+                    <tr className="border-t">
+                      <td className="py-2 pr-4 font-medium text-gray-500 whitespace-nowrap">총 기록 수</td>
+                      <td className="py-2">{(ticket.diagnostic_data as any).dataCounts.totalRecords}</td>
+                    </tr>
+                    <tr className="border-t">
+                      <td className="py-2 pr-4 font-medium text-gray-500 whitespace-nowrap">카드 수</td>
+                      <td className="py-2">{(ticket.diagnostic_data as any).dataCounts.cardCount}</td>
+                    </tr>
+                    <tr className="border-t">
+                      <td className="py-2 pr-4 font-medium text-gray-500 whitespace-nowrap">자산 수</td>
+                      <td className="py-2">{(ticket.diagnostic_data as any).dataCounts.assetCount}</td>
+                    </tr>
+                  </>
+                )}
+                {/* 파일 상태 */}
+                {(ticket.diagnostic_data as any).files && (
+                  <tr className="border-t">
+                    <td className="py-2 pr-4 font-medium text-gray-500 whitespace-nowrap align-top">파일 상태</td>
+                    <td className="py-2">
+                      {((ticket.diagnostic_data as any).files as any[]).map((f: any, i: number) => (
+                        <div key={i} className="flex items-center gap-2 text-xs py-0.5">
+                          <span className={f.integrityOk === false ? 'text-red-600' : 'text-green-600'}>
+                            {f.integrityOk === false ? '✗' : f.exists ? '✓' : '—'}
+                          </span>
+                          <span className="font-mono">{f.fileName}</span>
+                          {f.sizeBytes != null && (
+                            <span className="text-gray-400">({(f.sizeBytes / 1024).toFixed(1)} KB)</span>
+                          )}
+                        </div>
+                      ))}
+                    </td>
+                  </tr>
+                )}
+                <tr className="border-t">
+                  <td className="py-2 pr-4 font-medium text-gray-500 whitespace-nowrap">생성 시각</td>
+                  <td className="py-2">{(ticket.diagnostic_data as any).generatedAt ?? '-'}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+      )}
+
       {/* 메시지 스레드 */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <h2 className="font-semibold mb-4 text-sm">메시지 ({messages?.length || 0})</h2>
