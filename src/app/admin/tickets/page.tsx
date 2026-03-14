@@ -53,7 +53,6 @@ export default async function TicketsPage({
   const statusFilter = params.status || 'all';
   const supabase = getSupabaseAdmin();
 
-  // 티켓 목록 조회
   let query = supabase
     .from('support_tickets')
     .select('*, users(display_id)')
@@ -65,7 +64,6 @@ export default async function TicketsPage({
 
   const { data: tickets } = await query;
 
-  // 각 티켓의 메시지 수 조회
   const ticketIds = tickets?.map((t) => t.id) ?? [];
   let messageCounts: Record<string, number> = {};
 
@@ -84,10 +82,10 @@ export default async function TicketsPage({
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">티켓 관리</h1>
+      <h1 className="text-xl lg:text-2xl font-bold mb-4 lg:mb-6">티켓 관리</h1>
 
       {/* 상태 필터 */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-4 lg:mb-6">
         {STATUS_OPTIONS.map((status) => (
           <Link
             key={status}
@@ -103,8 +101,47 @@ export default async function TicketsPage({
         ))}
       </div>
 
-      {/* 티켓 테이블 */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      {/* 모바일: 카드 뷰 */}
+      <div className="lg:hidden space-y-3">
+        {tickets && tickets.length > 0 ? (
+          tickets.map((ticket) => (
+            <Link
+              key={ticket.id}
+              href={`/admin/tickets/${ticket.id}`}
+              className="block bg-white rounded-lg shadow p-4 hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span
+                  className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+                    STATUS_COLORS[ticket.status] || 'bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  {STATUS_LABELS[ticket.status] || ticket.status}
+                </span>
+                <span className="text-xs text-gray-400">{formatDate(ticket.updated_at)}</span>
+              </div>
+              <p className="font-medium text-gray-900 text-sm mb-1">{ticket.subject}</p>
+              <div className="flex items-center gap-3 text-xs text-gray-500">
+                <span>{ticket.category}</span>
+                <span className={PRIORITY_COLORS[ticket.priority] || 'text-gray-500'}>
+                  {PRIORITY_LABELS[ticket.priority] || ticket.priority}
+                </span>
+                <span>{(ticket.users as { display_id: string })?.display_id ?? ticket.display_id ?? '-'}</span>
+                {(messageCounts[ticket.id] || 0) > 0 && (
+                  <span className="ml-auto">💬 {messageCounts[ticket.id]}</span>
+                )}
+              </div>
+            </Link>
+          ))
+        ) : (
+          <div className="bg-white rounded-lg shadow p-12 text-center text-gray-400">
+            티켓이 없습니다
+          </div>
+        )}
+      </div>
+
+      {/* 데스크톱: 테이블 뷰 */}
+      <div className="hidden lg:block bg-white rounded-lg shadow overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b">
             <tr>
