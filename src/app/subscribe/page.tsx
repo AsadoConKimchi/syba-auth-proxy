@@ -10,7 +10,8 @@ export default function SubscribePage() {
     // 기존 subscribe.html의 전체 콘텐츠를 그대로 렌더링
     if (containerRef.current) {
       const iframe = document.createElement('iframe');
-      iframe.src = '/subscribe.html';
+      // 현재 페이지의 query string을 iframe에 전달 (uid 등)
+      iframe.src = `/subscribe.html${window.location.search}`;
       iframe.style.width = '100%';
       iframe.style.height = '100vh';
       iframe.style.border = 'none';

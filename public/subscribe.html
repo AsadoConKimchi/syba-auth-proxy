@@ -161,6 +161,44 @@
     .copy-msg { font-size: 12px; color: #22C55E; margin-top: 4px; }
     .hidden { display: none; }
 
+    /* Auth Section */
+    .auth-section {
+      display: none;
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .auth-section.visible { display: block; }
+    .auth-section h2 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+    .auth-section p { font-size: 14px; color: #888; margin-bottom: 20px; }
+    .auth-qr-container {
+      background: #FFF;
+      border-radius: 16px;
+      padding: 20px;
+      display: inline-block;
+      margin-bottom: 16px;
+      cursor: pointer;
+    }
+    .auth-qr-container canvas { display: block; }
+    .auth-copy-msg { font-size: 12px; color: #22C55E; margin-top: 4px; }
+    .auth-copy-hint { font-size: 12px; color: #666; margin-top: 4px; }
+    .auth-status { font-size: 14px; color: #888; margin-top: 12px; }
+
+    /* Return to app */
+    .return-btn {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 14px 32px;
+      background: #F7931A;
+      color: #FFF;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .return-btn:hover { opacity: 0.9; }
+
     /* Loading */
     .spinner {
       display: inline-block;
@@ -182,6 +220,20 @@
     <div class="header">
       <h1>SYBA Premium</h1>
       <p>Lightning으로 구독하기</p>
+    </div>
+
+    <!-- LNURL-auth Section (uid 없을 때 표시) -->
+    <div class="auth-section" id="authSection">
+      <h2>⚡ Lightning 지갑으로 로그인</h2>
+      <p>Lightning 지갑으로 QR 코드를 스캔하여 인증하세요</p>
+      <div class="auth-qr-container" id="authQrContainer" onclick="copyAuthLnurl()">
+        <canvas id="authQrCanvas"></canvas>
+      </div>
+      <div class="auth-copy-hint" id="authCopyHint">탭하여 복사</div>
+      <div class="auth-copy-msg hidden" id="authCopyMsg">복사됨!</div>
+      <div class="auth-status" id="authStatus">
+        <span class="spinner"></span> 인증 대기 중...
+      </div>
     </div>
 
     <!-- Tier Selection -->
@@ -265,6 +317,7 @@
       <div class="success-icon">✅</div>
       <h2>구독 완료!</h2>
       <p>SYBA 앱으로 돌아가면 프리미엄이 활성화됩니다.</p>
+      <a href="syba://" class="return-btn" id="returnToAppBtn">📱 앱으로 돌아가기</a>
     </div>
   </div>
 
@@ -281,6 +334,72 @@
     const SUPABASE_URL = 'https://tbjfzenhrjcygvqfpqwl.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRiamZ6ZW5ocmpjeWd2cWZwcXdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4NjUyNDAsImV4cCI6MjA4NTQ0MTI0MH0.WB_b-Bx_wOgCTjWIss0RE3Waz01jDLxS6ZoaBgZNCd8';
 
+    // Bech32 인코딩 (LNURL용 — 모바일 앱 lnurlAuth.ts와 동일 로직)
+    const BECH32_CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+
+    function bech32Polymod(values) {
+      const GEN = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
+      let chk = 1;
+      for (const v of values) {
+        const b = chk >> 25;
+        chk = ((chk & 0x1ffffff) << 5) ^ v;
+        for (let i = 0; i < 5; i++) {
+          if ((b >> i) & 1) chk ^= GEN[i];
+        }
+      }
+      return chk;
+    }
+
+    function bech32HrpExpand(hrp) {
+      const ret = [];
+      for (let i = 0; i < hrp.length; i++) ret.push(hrp.charCodeAt(i) >> 5);
+      ret.push(0);
+      for (let i = 0; i < hrp.length; i++) ret.push(hrp.charCodeAt(i) & 31);
+      return ret;
+    }
+
+    function bech32CreateChecksum(hrp, data) {
+      const values = bech32HrpExpand(hrp).concat(data).concat([0, 0, 0, 0, 0, 0]);
+      const polymod = bech32Polymod(values) ^ 1;
+      const ret = [];
+      for (let i = 0; i < 6; i++) ret.push((polymod >> (5 * (5 - i))) & 31);
+      return ret;
+    }
+
+    function convertBits(data, fromBits, toBits, pad) {
+      let acc = 0, bits = 0;
+      const ret = [], maxv = (1 << toBits) - 1;
+      for (const value of data) {
+        acc = (acc << fromBits) | value;
+        bits += fromBits;
+        while (bits >= toBits) { bits -= toBits; ret.push((acc >> bits) & maxv); }
+      }
+      if (pad && bits > 0) ret.push((acc << (toBits - bits)) & maxv);
+      return ret;
+    }
+
+    function encodeLnurl(url) {
+      const hrp = 'lnurl';
+      const data = convertBits(Array.from(new TextEncoder().encode(url)), 8, 5, true);
+      const checksum = bech32CreateChecksum(hrp, data);
+      const combined = data.concat(checksum);
+      let encoded = hrp + '1';
+      for (const d of combined) encoded += BECH32_CHARSET[d];
+      return encoded.toUpperCase();
+    }
+
+    // 현재 auth LNURL (복사용)
+    let currentAuthLnurlEncoded = null;
+
+    function copyAuthLnurl() {
+      if (!currentAuthLnurlEncoded) return;
+      navigator.clipboard.writeText(currentAuthLnurlEncoded).then(() => {
+        const msg = document.getElementById('authCopyMsg');
+        msg.classList.remove('hidden');
+        setTimeout(() => msg.classList.add('hidden'), 2000);
+      });
+    }
+
     // State
     let currentTier = 'monthly';
     let currentDiscount = null; // { id, discount_type, discount_value }
@@ -293,6 +412,120 @@
     let currentInvoice = null;
     let userId = null;
     let supabaseClient = null;
+
+    // ============================================================
+    // LNURL-auth 헬퍼 (uid 없을 때 웹에서 직접 인증)
+    // ============================================================
+    function generateRandomHex(bytes) {
+      const arr = new Uint8Array(bytes);
+      crypto.getRandomValues(arr);
+      return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function startLnurlAuth() {
+      if (!supabaseClient) return;
+
+      const authSection = document.getElementById('authSection');
+      authSection.classList.add('visible');
+
+      // 결제 UI 숨기기
+      document.getElementById('tierSection').style.display = 'none';
+      document.querySelector('.discount-section').style.display = 'none';
+      document.getElementById('priceSummary').style.display = 'none';
+      document.getElementById('payBtn').style.display = 'none';
+
+      try {
+        // k1 challenge 생성
+        const k1 = generateRandomHex(32);
+
+        // lnurl_auth_sessions 테이블에 세션 생성
+        const { data: session, error } = await supabaseClient
+          .from('lnurl_auth_sessions')
+          .insert({ k1, status: 'pending' })
+          .select()
+          .single();
+
+        if (error || !session) {
+          document.getElementById('authStatus').textContent = '❌ 인증 세션 생성 실패';
+          return;
+        }
+
+        // LNURL-auth callback URL (Vercel 프록시 경유)
+        const callbackUrl = `${window.location.origin}/api/lnurl-auth?tag=login&k1=${k1}&action=login`;
+
+        // Bech32 인코딩 (Lightning 지갑이 LNURL로 인식)
+        currentAuthLnurlEncoded = encodeLnurl(callbackUrl);
+
+        // QR 코드 표시 (bech32 인코딩된 LNURL)
+        new QRious({
+          element: document.getElementById('authQrCanvas'),
+          value: currentAuthLnurlEncoded,
+          size: 240,
+          level: 'M',
+        });
+
+        // 인증 완료 폴링 (2초 간격, 최대 5분)
+        const maxAttempts = 150;
+        let attempts = 0;
+
+        const authPoll = setInterval(async () => {
+          attempts++;
+          if (attempts > maxAttempts) {
+            clearInterval(authPoll);
+            document.getElementById('authStatus').textContent = '⏰ 인증 시간이 초과되었습니다';
+            return;
+          }
+
+          try {
+            const { data: updated } = await supabaseClient
+              .from('lnurl_auth_sessions')
+              .select('*')
+              .eq('id', session.id)
+              .single();
+
+            if (updated && updated.status === 'authenticated' && updated.linking_key) {
+              clearInterval(authPoll);
+
+              // linking_key로 사용자 조회 또는 생성
+              const { data: existingUser } = await supabaseClient
+                .from('users')
+                .select('*')
+                .eq('linking_key', updated.linking_key)
+                .single();
+
+              if (existingUser) {
+                userId = existingUser.id;
+              } else {
+                const { data: newUser } = await supabaseClient
+                  .from('users')
+                  .insert({ linking_key: updated.linking_key })
+                  .select()
+                  .single();
+                if (newUser) userId = newUser.id;
+              }
+
+              if (userId) {
+                // 인증 성공 → 결제 UI 표시
+                authSection.classList.remove('visible');
+                document.getElementById('tierSection').style.display = '';
+                document.querySelector('.discount-section').style.display = '';
+                document.getElementById('priceSummary').style.display = '';
+                document.getElementById('payBtn').style.display = '';
+                document.getElementById('authStatus').textContent = '';
+              } else {
+                document.getElementById('authStatus').textContent = '❌ 사용자 생성 실패';
+              }
+            }
+          } catch (e) {
+            // 폴링 에러 무시
+          }
+        }, 2000);
+
+      } catch (e) {
+        console.error('LNURL-auth 시작 실패:', e);
+        document.getElementById('authStatus').textContent = '❌ 인증 시작 실패';
+      }
+    }
 
     // Init
     window.addEventListener('DOMContentLoaded', async () => {
@@ -312,6 +545,11 @@
       }
 
       updatePriceDisplay();
+
+      // uid 없으면 LNURL-auth 시작
+      if (!userId) {
+        startLnurlAuth();
+      }
     });
 
     async function loadPricesFromDB() {
