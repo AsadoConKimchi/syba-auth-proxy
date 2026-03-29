@@ -666,15 +666,10 @@
           .eq('is_active', true);
 
         if (data && data.length > 0) {
-          // monthly의 price_sats를 기준 가격으로 사용
-          const monthlyRow = data.find(p => p.tier === 'monthly');
-          const basePrice = monthlyRow ? monthlyRow.price_sats : 1000;
-          const fallbackMultipliers = { monthly: 1, annual: 10, lifetime: 60 };
-
+          // DB의 price_sats를 직접 사용 (admin에서 수정한 값이 바로 반영됨)
           data.forEach(p => {
-            const multiplier = p.base_multiplier || fallbackMultipliers[p.tier] || 1;
             tierPrices[p.tier] = {
-              price: basePrice * multiplier,
+              price: p.price_sats,
               durationDays: p.duration_days,
               maxQuantity: p.max_quantity,
               currentSold: p.current_sold,
