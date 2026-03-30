@@ -9,8 +9,20 @@ interface SubscriptionPrice {
   duration_days: number;
   max_quantity: number;
   current_sold: number;
+  actual_sold: number;
   is_active: boolean;
   base_multiplier: number;
+}
+
+interface Payment {
+  id: string;
+  user_id: string;
+  display_id: string;
+  tier: string;
+  amount_sats: number;
+  status: string;
+  paid_at: string;
+  discount_code: string | null;
 }
 
 const TIER_LABELS: Record<string, string> = {
@@ -27,9 +39,10 @@ const TIER_COLORS: Record<string, string> = {
 
 interface Props {
   initialPrices: SubscriptionPrice[];
+  recentPayments: Payment[];
 }
 
-export default function PricesClient({ initialPrices }: Props) {
+export default function PricesClient({ initialPrices, recentPayments }: Props) {
   const [prices, setPrices] = useState(initialPrices);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -66,7 +79,7 @@ export default function PricesClient({ initialPrices }: Props) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      setPrices(prices.map((p) => (p.id === id ? data.price : p)));
+      setPrices(prices.map((p) => (p.id === id ? { ...data.price, actual_sold: p.actual_sold } : p)));
       setEditingId(null);
       setSuccess('가격이 수정되었습니다.');
     } catch (err) {
@@ -90,7 +103,8 @@ export default function PricesClient({ initialPrices }: Props) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      setPrices(prices.map((p) => (p.id === id ? data.price : p)));
+      const existing = prices.find((p) => p.id === id);
+      setPrices(prices.map((p) => (p.id === id ? { ...data.price, actual_sold: existing?.actual_sold ?? 0 } : p)));
       setSuccess(`${TIER_LABELS[data.price.tier]} 플랜이 ${data.price.is_active ? '활성화' : '비활성화'}되었습니다.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : '상태 변경 실패');
@@ -104,11 +118,23 @@ export default function PricesClient({ initialPrices }: Props) {
     return `${days}일`;
   }
 
+  function formatDate(dateStr: string) {
+    const d = new Date(dateStr);
+    const m = d.getMonth() + 1;
+    const day = d.getDate();
+    const h = d.getHours().toString().padStart(2, '0');
+    const min = d.getMinutes().toString().padStart(2, '0');
+    return `${m}/${day} ${h}:${min}`;
+  }
+
+  // 총 매출 계산
+  const totalRevenue = recentPayments.reduce((sum, p) => sum + p.amount_sats, 0);
+
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold">가격 정책</h1>
-        <p className="text-sm text-gray-500 mt-1">구독 플랜별 가격(sats)과 판매 수량을 관리합니다.</p>
+        <p className="text-sm text-gray-500 mt-1">구독 플랜별 가격(sats)과 판매 현황을 관리합니다.</p>
       </div>
 
       {error && (
@@ -125,7 +151,8 @@ export default function PricesClient({ initialPrices }: Props) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4">
+      {/* 가격 카드 */}
+      <div className="grid grid-cols-1 gap-4 mb-8">
         {prices.map((price) => (
           <div
             key={price.id}
@@ -189,7 +216,7 @@ export default function PricesClient({ initialPrices }: Props) {
                       min={-1}
                     />
                     <p className="text-xs text-gray-400 mt-1">
-                      현재 판매: {price.current_sold}개
+                      실제 판매: {price.actual_sold}건
                     </p>
                   </div>
                 </div>
@@ -217,19 +244,26 @@ export default function PricesClient({ initialPrices }: Props) {
                   <p className="text-xs text-gray-400">sats</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">판매 수량</p>
+                  <p className="text-xs text-gray-500 mb-1">누적 판매</p>
                   <p className="text-2xl font-bold">
-                    {price.current_sold}
-                    <span className="text-sm font-normal text-gray-400">
-                      /{price.max_quantity === -1 ? '∞' : price.max_quantity}
-                    </span>
+                    {price.actual_sold}
+                    <span className="text-sm font-normal text-gray-400">건</span>
+                    {price.max_quantity !== -1 && (
+                      <span className="text-sm font-normal text-gray-400">
+                        {' '}/ {price.max_quantity}
+                      </span>
+                    )}
                   </p>
-                  <p className="text-xs text-gray-400">판매됨/최대</p>
+                  <p className="text-xs text-gray-400">
+                    {price.actual_sold * price.price_sats > 0
+                      ? `총 ${(price.actual_sold * price.price_sats).toLocaleString()} sats (정가 기준)`
+                      : '결제 없음'}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">상태</p>
                   <p className="text-sm font-medium mt-1">
-                    {price.max_quantity !== -1 && price.current_sold >= price.max_quantity ? (
+                    {price.max_quantity !== -1 && price.actual_sold >= price.max_quantity ? (
                       <span className="text-red-600">품절</span>
                     ) : price.is_active ? (
                       <span className="text-green-600">판매 중</span>
@@ -248,6 +282,57 @@ export default function PricesClient({ initialPrices }: Props) {
             가격 데이터가 없습니다
           </div>
         )}
+      </div>
+
+      {/* 최근 결제 내역 */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="p-6 border-b">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">최근 결제 내역</h2>
+            <p className="text-sm text-gray-500">
+              총 {recentPayments.length}건 · {totalRevenue.toLocaleString()} sats
+            </p>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-gray-50">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">사용자</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">티어</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500">금액</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">할인코드</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500">결제일</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentPayments.map((p) => (
+                <tr key={p.id} className="border-b hover:bg-gray-50">
+                  <td className="px-6 py-3 font-mono text-orange-600 text-xs">{p.display_id}</td>
+                  <td className="px-6 py-3">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${TIER_COLORS[p.tier] || 'bg-gray-100 text-gray-600'}`}>
+                      {TIER_LABELS[p.tier] || p.tier}
+                    </span>
+                  </td>
+                  <td className="px-6 py-3 text-right font-mono font-medium">{p.amount_sats.toLocaleString()} sats</td>
+                  <td className="px-6 py-3 text-xs">
+                    {p.discount_code ? (
+                      <span className="px-2 py-0.5 bg-yellow-50 text-yellow-700 rounded">{p.discount_code}</span>
+                    ) : (
+                      <span className="text-gray-300">-</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-3 text-right text-xs text-gray-500">{formatDate(p.paid_at)}</td>
+                </tr>
+              ))}
+              {recentPayments.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-400">결제 내역이 없습니다</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
