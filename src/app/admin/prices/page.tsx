@@ -1,6 +1,8 @@
 import { getSupabaseAdmin } from '@/lib/supabase';
 import PricesClient from './PricesClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function PricesPage() {
   const supabase = getSupabaseAdmin();
 
