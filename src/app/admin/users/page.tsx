@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 interface UsersPageProps {
   searchParams: Promise<{ q?: string }>;
 }
@@ -9,19 +11,72 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
   const { q } = await searchParams;
   const supabase = getSupabaseAdmin();
 
-  // 사용자 목록 조회 (구독 정보 포함)
+  // 사용자 목록 조회 (구독 정보 + 만료일 포함)
   let query = supabase
     .from('users')
-    .select('id, display_id, email, created_at, subscriptions(status, tier)')
+    .select('id, display_id, email, created_at, subscriptions(status, tier, expires_at, is_lifetime)')
     .order('created_at', { ascending: false })
     .limit(100);
 
-  // 검색어가 있으면 display_id 또는 email로 필터
   if (q) {
     query = query.or(`display_id.ilike.%${q}%,email.ilike.%${q}%`);
   }
 
   const { data: users, error } = await query;
+
+  // 만료된 구독 자동 업데이트 (status='active' && expires_at < now && !is_lifetime)
+  const now = new Date();
+  const expiredSubIds: string[] = [];
+  if (users) {
+    for (const user of users) {
+      const sub = Array.isArray(user.subscriptions) ? user.subscriptions[0] : user.subscriptions;
+      if (sub && sub.status === 'active' && !sub.is_lifetime && sub.expires_at) {
+        if (new Date(sub.expires_at) < now) {
+          expiredSubIds.push(user.id);
+        }
+      }
+    }
+  }
+
+  // 만료된 구독 DB status 일괄 업데이트
+  if (expiredSubIds.length > 0) {
+    await supabase
+      .from('subscriptions')
+      .update({ status: 'expired' })
+      .in('user_id', expiredSubIds)
+      .eq('status', 'active')
+      .lt('expires_at', now.toISOString())
+      .eq('is_lifetime', false);
+  }
+
+  // 실시간 상태 계산 헬퍼
+  function getEffectiveStatus(sub: { status: string; expires_at: string | null; is_lifetime: boolean } | null) {
+    if (!sub) return null;
+    if (sub.status !== 'active') return sub.status;
+    if (sub.is_lifetime) return 'active';
+    if (sub.expires_at && new Date(sub.expires_at) < now) return 'expired';
+    return 'active';
+  }
+
+  function getStatusLabel(status: string | null) {
+    if (!status) return null;
+    switch (status) {
+      case 'active': return '활성';
+      case 'expired': return '만료';
+      case 'revoked': return '해지';
+      case 'cancelled': return '취소';
+      default: return status;
+    }
+  }
+
+  function getStatusColor(status: string | null) {
+    switch (status) {
+      case 'active': return 'bg-green-100 text-green-700';
+      case 'expired': return 'bg-yellow-100 text-yellow-700';
+      case 'revoked': return 'bg-red-100 text-red-700';
+      default: return 'bg-gray-100 text-gray-600';
+    }
+  }
 
   return (
     <div>
@@ -74,10 +129,11 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
           <tbody className="divide-y">
             {users && users.length > 0 ? (
               users.map((user) => {
-                // subscriptions는 배열로 반환될 수 있음 — 첫 번째(최신) 항목 사용
                 const sub = Array.isArray(user.subscriptions)
                   ? user.subscriptions[0]
                   : user.subscriptions;
+
+                const effectiveStatus = getEffectiveStatus(sub as { status: string; expires_at: string | null; is_lifetime: boolean } | null);
 
                 return (
                   <tr key={user.id} className="hover:bg-gray-50">
@@ -91,18 +147,12 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                     </td>
                     <td className="px-6 py-3 text-gray-600">{user.email ?? '-'}</td>
                     <td className="px-6 py-3">
-                      {sub ? (
+                      {sub && effectiveStatus ? (
                         <span
-                          className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-                            sub.status === 'active'
-                              ? 'bg-green-100 text-green-700'
-                              : sub.status === 'expired'
-                                ? 'bg-yellow-100 text-yellow-700'
-                                : 'bg-gray-100 text-gray-600'
-                          }`}
+                          className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(effectiveStatus)}`}
                         >
-                          {sub.status === 'active' ? '활성' : sub.status === 'expired' ? '만료' : sub.status === 'revoked' ? '해지' : sub.status}
-                          {sub.tier ? ` (${sub.tier})` : ''}
+                          {getStatusLabel(effectiveStatus)}
+                          {(sub as { tier?: string }).tier ? ` (${(sub as { tier?: string }).tier})` : ''}
                         </span>
                       ) : (
                         <span className="text-gray-400 text-xs">없음</span>
@@ -125,7 +175,6 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
         </table>
       </div>
 
-      {/* 결과 카운트 */}
       {users && (
         <p className="mt-4 text-sm text-gray-500">
           {users.length}명 표시 중
