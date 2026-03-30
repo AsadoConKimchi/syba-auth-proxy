@@ -88,6 +88,110 @@ export default async function AnalyticsPage({
     .lte('date', dateRange.to)
     .order('date', { ascending: false });
 
+  // 기능별 사용률 (app_events에서 집계)
+  const { data: eventCounts } = await supabase
+    .from('app_events')
+    .select('event_type')
+    .gte('created_at', `${dateRange.from}T00:00:00`)
+    .lte('created_at', `${dateRange.to}T23:59:59`);
+
+  const featureUsage: Record<string, number> = {};
+  for (const e of eventCounts ?? []) {
+    featureUsage[e.event_type] = (featureUsage[e.event_type] || 0) + 1;
+  }
+  const featureUsageData = Object.entries(featureUsage)
+    .map(([event, count]) => ({ event, count }))
+    .sort((a, b) => b.count - a.count);
+
+  // 코호트 잔존율 (가입 월별 → 이후 월별 활동 비율)
+  const { data: allUsers } = await supabase
+    .from('users')
+    .select('id, created_at')
+    .order('created_at', { ascending: true });
+
+  const { data: allAppOpens } = await supabase
+    .from('app_events')
+    .select('user_id, created_at')
+    .eq('event_type', 'app_open')
+    .not('user_id', 'is', null);
+
+  // 코호트 계산
+  const cohortData: Array<{ cohort: string; months: Array<{ month: number; retention: number }> }> = [];
+  if (allUsers && allAppOpens) {
+    // 사용자를 가입 월별로 그룹화
+    const cohortUsers: Record<string, string[]> = {};
+    for (const u of allUsers) {
+      const cohortMonth = toMonthKey(u.created_at);
+      if (!cohortUsers[cohortMonth]) cohortUsers[cohortMonth] = [];
+      cohortUsers[cohortMonth].push(u.id);
+    }
+
+    // 활동 월별 사용자 매핑
+    const userActivity: Record<string, Set<string>> = {};
+    for (const e of allAppOpens) {
+      if (!e.user_id) continue;
+      const month = toMonthKey(e.created_at);
+      if (!userActivity[month]) userActivity[month] = new Set();
+      userActivity[month].add(e.user_id);
+    }
+
+    const sortedCohorts = Object.keys(cohortUsers).sort();
+    for (const cohort of sortedCohorts) {
+      const users = cohortUsers[cohort];
+      const months: Array<{ month: number; retention: number }> = [];
+      // 최대 6개월까지 추적
+      for (let i = 0; i <= 5; i++) {
+        const [y, m] = cohort.split('-').map(Number);
+        const targetDate = new Date(y, m - 1 + i, 1);
+        const targetMonth = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
+        const activeUsers = userActivity[targetMonth];
+        const retained = activeUsers
+          ? users.filter(uid => activeUsers.has(uid)).length
+          : 0;
+        months.push({ month: i, retention: users.length > 0 ? Math.round((retained / users.length) * 100) : 0 });
+      }
+      cohortData.push({ cohort, months });
+    }
+  }
+
+  // MRR/ARR 계산 (활성 구독 기반)
+  const { data: activeSubscriptions } = await supabase
+    .from('subscriptions')
+    .select('tier, is_lifetime, started_at')
+    .eq('status', 'active');
+
+  // monthly 가격 기준으로 MRR 계산
+  const { data: subPrices } = await supabase
+    .from('subscription_prices')
+    .select('tier, price_sats, base_multiplier')
+    .eq('is_active', true);
+
+  const monthlyPrice = subPrices?.find(p => p.tier === 'monthly');
+  const basePrice = monthlyPrice?.price_sats || 1000;
+
+  let mrrSats = 0;
+  const subCounts = { monthly: 0, annual: 0, lifetime: 0 };
+  for (const sub of activeSubscriptions ?? []) {
+    if (sub.tier === 'monthly') {
+      mrrSats += basePrice;
+      subCounts.monthly++;
+    } else if (sub.tier === 'annual') {
+      // 연간 구독의 월 환산 MRR
+      const annualMultiplier = subPrices?.find(p => p.tier === 'annual')?.base_multiplier || 10;
+      mrrSats += Math.round((basePrice * annualMultiplier) / 12);
+      subCounts.annual++;
+    }
+    // lifetime은 MRR에 포함하지 않음
+    if (sub.tier === 'lifetime') subCounts.lifetime++;
+  }
+
+  const mrrData = {
+    mrr: mrrSats,
+    arr: mrrSats * 12,
+    subscribers: subCounts,
+    totalActive: (activeSubscriptions ?? []).length,
+  };
+
   // BTC/KRW 환율
   const btcKrwRate = await fetchBtcKrwRate();
 
@@ -157,6 +261,9 @@ export default async function AnalyticsPage({
       btcKrwRate={btcKrwRate}
       dateRange={dateRange}
       preset={preset}
+      featureUsageData={featureUsageData}
+      cohortData={cohortData}
+      mrrData={mrrData}
     />
   );
 }

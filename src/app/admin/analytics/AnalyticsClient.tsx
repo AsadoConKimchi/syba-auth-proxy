@@ -37,6 +37,23 @@ interface Summary {
   totalExpenses: number;
 }
 
+interface FeatureUsage {
+  event: string;
+  count: number;
+}
+
+interface CohortData {
+  cohort: string;
+  months: Array<{ month: number; retention: number }>;
+}
+
+interface MrrData {
+  mrr: number;
+  arr: number;
+  subscribers: { monthly: number; annual: number; lifetime: number };
+  totalActive: number;
+}
+
 interface Props {
   monthlyData: MonthlyData[];
   tierData: TierData[];
@@ -45,6 +62,9 @@ interface Props {
   btcKrwRate: number;
   dateRange: { from: string; to: string };
   preset: string;
+  featureUsageData: FeatureUsage[];
+  cohortData: CohortData[];
+  mrrData: MrrData;
 }
 
 const PRESETS = [
@@ -84,8 +104,28 @@ function formatSats(sats: number): string {
   return sats.toLocaleString();
 }
 
+const EVENT_LABELS: Record<string, string> = {
+  app_open: '앱 실행',
+  subscription_view: '구독 페이지 조회',
+  payment_start: '결제 시작',
+  payment_complete: '결제 완료',
+  ticket_created: '티켓 생성',
+  expense_added: '지출 입력',
+  income_added: '수입 입력',
+  transfer_added: '이체',
+  backup_created: '백업 생성',
+  backup_restored: '백업 복원',
+  recurring_set: '정기 항목 설정',
+  recurring_executed: '정기 항목 실행',
+  asset_added: '자산 추가',
+  card_added: '카드 추가',
+  premium_gate_viewed: '프리미엄 게이트 노출',
+  settings_changed: '설정 변경',
+};
+
 export default function AnalyticsClient({
   monthlyData, tierData, summary, expenses, btcKrwRate, dateRange, preset,
+  featureUsageData, cohortData, mrrData,
 }: Props) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
@@ -308,6 +348,117 @@ export default function AnalyticsClient({
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* MRR/ARR */}
+      <div className="bg-white rounded-lg shadow p-6 mb-8">
+        <h2 className="text-lg font-semibold mb-4">MRR / ARR (사토시 기반)</h2>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <SummaryCard
+            label="MRR"
+            value={`${formatSats(mrrData.mrr)} sats`}
+            sub={btcKrwRate > 0 ? `≈₩${satsToKrw(mrrData.mrr, btcKrwRate)}` : undefined}
+          />
+          <SummaryCard
+            label="ARR"
+            value={`${formatSats(mrrData.arr)} sats`}
+            sub={btcKrwRate > 0 ? `≈₩${satsToKrw(mrrData.arr, btcKrwRate)}` : undefined}
+          />
+          <SummaryCard label="활성 구독자" value={`${mrrData.totalActive}명`} />
+          <SummaryCard
+            label="구독 구성"
+            value={`월${mrrData.subscribers.monthly} / 연${mrrData.subscribers.annual} / 평생${mrrData.subscribers.lifetime}`}
+          />
+        </div>
+        {/* 손익 계산 */}
+        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+          <h3 className="text-sm font-medium text-gray-500 mb-2">기간 내 손익</h3>
+          <div className="flex items-center gap-6">
+            <div>
+              <span className="text-xs text-gray-400">매출 - 비용</span>
+              <p className={`text-lg font-bold ${summary.totalRevenue - summary.totalExpenses >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {summary.totalRevenue - summary.totalExpenses >= 0 ? '+' : ''}{formatSats(summary.totalRevenue - summary.totalExpenses)} sats
+              </p>
+            </div>
+            {btcKrwRate > 0 && (
+              <div>
+                <span className="text-xs text-gray-400">원화 환산</span>
+                <p className={`text-lg font-bold ${summary.totalRevenue - summary.totalExpenses >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  ≈₩{satsToKrw(Math.abs(summary.totalRevenue - summary.totalExpenses), btcKrwRate)}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 기능별 사용률 */}
+      {featureUsageData.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6 mb-8">
+          <h2 className="text-lg font-semibold mb-4">기능별 사용률</h2>
+          <div className="space-y-2">
+            {featureUsageData.map((f) => {
+              const maxCount = featureUsageData[0]?.count || 1;
+              const pct = Math.round((f.count / maxCount) * 100);
+              return (
+                <div key={f.event} className="flex items-center gap-3">
+                  <span className="text-sm w-40 text-gray-600 truncate">{EVENT_LABELS[f.event] || f.event}</span>
+                  <div className="flex-1 bg-gray-100 rounded-full h-5 relative">
+                    <div
+                      className="bg-orange-400 h-5 rounded-full transition-all"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <span className="text-sm font-mono text-gray-500 w-16 text-right">{f.count.toLocaleString()}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 코호트 잔존율 */}
+      {cohortData.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6 mb-8">
+          <h2 className="text-lg font-semibold mb-4">코호트 잔존율</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="text-left px-3 py-2 font-medium text-gray-500">코호트</th>
+                  <th className="text-center px-3 py-2 font-medium text-gray-500">M0</th>
+                  <th className="text-center px-3 py-2 font-medium text-gray-500">M1</th>
+                  <th className="text-center px-3 py-2 font-medium text-gray-500">M2</th>
+                  <th className="text-center px-3 py-2 font-medium text-gray-500">M3</th>
+                  <th className="text-center px-3 py-2 font-medium text-gray-500">M4</th>
+                  <th className="text-center px-3 py-2 font-medium text-gray-500">M5</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {cohortData.slice(-6).map((c) => (
+                  <tr key={c.cohort} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 font-medium">{c.cohort}</td>
+                    {c.months.map((m) => {
+                      const bg = m.retention >= 50
+                        ? 'bg-green-100 text-green-800'
+                        : m.retention >= 20
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : m.retention > 0
+                        ? 'bg-red-50 text-red-700'
+                        : 'text-gray-300';
+                      return (
+                        <td key={m.month} className={`px-3 py-2 text-center font-mono ${bg}`}>
+                          {m.retention}%
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-2 text-xs text-gray-400">최근 6개 코호트 표시. M0=가입 월, M1=1개월 후...</p>
         </div>
       )}
 
