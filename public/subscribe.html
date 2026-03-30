@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SYBA Premium 구독</title>
+  <title>SYBA Premium</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -45,7 +45,6 @@
     .tier-card.selected { border-color: #F7931A; background: rgba(247,147,26,0.08); }
     .tier-card.sold-out { opacity: 0.4; pointer-events: none; }
     .tier-card.disabled { opacity: 0.3; pointer-events: none; }
-    .tier-card.disabled .tier-desc::after { content: ' (현재 플랜 이하)'; color: #666; }
 
     /* Upgrade Banner */
     .upgrade-banner {
@@ -235,21 +234,19 @@
     <!-- Header -->
     <div class="header">
       <h1>SYBA Premium</h1>
-      <p>Lightning으로 구독하기</p>
+      <p id="headerSubtitle"></p>
     </div>
 
-    <!-- LNURL-auth Section (uid 없을 때 표시) -->
+    <!-- LNURL-auth Section -->
     <div class="auth-section" id="authSection">
-      <h2>⚡ Lightning 지갑으로 로그인</h2>
-      <p>Lightning 지갑으로 QR 코드를 스캔하여 인증하세요</p>
+      <h2 id="authTitle"></h2>
+      <p id="authDesc"></p>
       <div class="auth-qr-container" id="authQrContainer" onclick="copyAuthLnurl()">
         <canvas id="authQrCanvas"></canvas>
       </div>
-      <div class="auth-copy-hint" id="authCopyHint">탭하여 복사</div>
-      <div class="auth-copy-msg hidden" id="authCopyMsg">복사됨!</div>
-      <div class="auth-status" id="authStatus">
-        <span class="spinner"></span> 인증 대기 중...
-      </div>
+      <div class="auth-copy-hint" id="authCopyHint"></div>
+      <div class="auth-copy-msg hidden" id="authCopyMsg"></div>
+      <div class="auth-status" id="authStatus"></div>
     </div>
 
     <!-- Upgrade Banner -->
@@ -260,40 +257,40 @@
       <div class="tier-card selected" data-tier="monthly" onclick="selectTier('monthly')">
         <div class="tier-row">
           <div>
-            <div class="tier-name">월간 구독</div>
-            <div class="tier-desc">매월 갱신</div>
+            <div class="tier-name" id="tierNameMonthly"></div>
+            <div class="tier-desc" id="tierDescMonthly"></div>
           </div>
-          <div class="tier-price" id="price-monthly">1,000 sats/월</div>
+          <div class="tier-price" id="price-monthly"></div>
         </div>
       </div>
 
       <div class="tier-card" data-tier="annual" onclick="selectTier('annual')">
         <div class="tier-row">
           <div>
-            <div class="tier-name">연간 구독 <span class="badge badge-green">2개월 무료</span></div>
-            <div class="tier-desc">연 1회 결제</div>
+            <div class="tier-name"><span id="tierNameAnnual"></span> <span class="badge badge-green" id="annualBadge"></span></div>
+            <div class="tier-desc" id="tierDescAnnual"></div>
           </div>
-          <div class="tier-price" id="price-annual">10,000 sats/년</div>
+          <div class="tier-price" id="price-annual"></div>
         </div>
       </div>
 
       <div class="tier-card" data-tier="lifetime" onclick="selectTier('lifetime')">
         <div class="tier-row">
           <div>
-            <div class="tier-name">평생 구독 <span class="badge badge-orange" id="lifetime-badge">한정 50석</span></div>
-            <div class="tier-desc">1회 결제, 영구 이용</div>
+            <div class="tier-name"><span id="tierNameLifetime"></span> <span class="badge badge-orange" id="lifetime-badge"></span></div>
+            <div class="tier-desc" id="tierDescLifetime"></div>
           </div>
-          <div class="tier-price" id="price-lifetime">60,000 sats</div>
+          <div class="tier-price" id="price-lifetime"></div>
         </div>
       </div>
     </div>
 
     <!-- Discount Code -->
     <div class="discount-section">
-      <label>할인코드</label>
+      <label id="discountLabel"></label>
       <div class="discount-row">
-        <input type="text" id="discountInput" placeholder="코드 입력" />
-        <button onclick="applyDiscount()">적용</button>
+        <input type="text" id="discountInput" />
+        <button onclick="applyDiscount()" id="discountApplyBtn"></button>
       </div>
       <div class="discount-msg" id="discountMsg"></div>
     </div>
@@ -301,46 +298,42 @@
     <!-- Price Summary -->
     <div class="price-summary" id="priceSummary">
       <div class="price-row" id="originalPriceRow" style="display:none;">
-        <span>원가</span>
+        <span id="originalPriceLabel"></span>
         <span class="strikethrough" id="originalPriceText"></span>
       </div>
       <div class="price-row" id="creditRow" style="display:none;">
-        <span style="color:#60A5FA" id="creditLabel">잔여일 크레딧</span>
+        <span style="color:#60A5FA" id="creditLabel"></span>
         <span style="color:#60A5FA" id="creditText"></span>
       </div>
       <div class="price-row" id="discountRow" style="display:none;">
-        <span style="color:#22C55E">할인</span>
+        <span style="color:#22C55E" id="discountRowLabel"></span>
         <span style="color:#22C55E" id="discountText"></span>
       </div>
       <div class="price-row total">
-        <span>결제 금액</span>
-        <span id="finalPriceText">1,000 sats</span>
+        <span id="totalLabel"></span>
+        <span id="finalPriceText"></span>
       </div>
     </div>
 
     <!-- Pay Button -->
-    <button class="pay-btn" id="payBtn" onclick="startPayment()">
-      ⚡ Lightning으로 결제하기
-    </button>
+    <button class="pay-btn" id="payBtn" onclick="startPayment()"></button>
 
     <!-- QR Code / Payment -->
     <div class="qr-section" id="qrSection">
       <div class="qr-container" onclick="copyInvoice()">
         <canvas id="qrCanvas"></canvas>
       </div>
-      <div class="copy-msg hidden" id="copyMsg">복사됨!</div>
-      <div class="status-text" id="statusText">
-        <span class="spinner"></span> 결제 대기 중...
-      </div>
+      <div class="copy-msg hidden" id="copyMsg"></div>
+      <div class="status-text" id="statusText"></div>
       <div class="invoice-preview" id="invoicePreview"></div>
     </div>
 
     <!-- Success -->
     <div class="success-section" id="successSection">
       <div class="success-icon">✅</div>
-      <h2>구독 완료!</h2>
-      <p>SYBA 앱으로 돌아가면 프리미엄이 활성화됩니다.</p>
-      <a href="syba://" class="return-btn" id="returnToAppBtn">📱 앱으로 돌아가기</a>
+      <h2 id="successTitle"></h2>
+      <p id="successDesc"></p>
+      <a href="syba://" class="return-btn" id="returnToAppBtn"></a>
     </div>
   </div>
 
@@ -351,13 +344,309 @@
 
   <script>
     // ============================================================
-    // Config — Supabase 연결 정보는 환경변수 또는 직접 입력
-    // 이 값들은 ANON KEY (공개 가능)이므로 클라이언트에 노출 OK
+    // Config
     // ============================================================
     const SUPABASE_URL = 'https://tbjfzenhrjcygvqfpqwl.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRiamZ6ZW5ocmpjeWd2cWZwcXdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk4NjUyNDAsImV4cCI6MjA4NTQ0MTI0MH0.WB_b-Bx_wOgCTjWIss0RE3Waz01jDLxS6ZoaBgZNCd8';
 
-    // Bech32 인코딩 (LNURL용 — 모바일 앱 lnurlAuth.ts와 동일 로직)
+    // ============================================================
+    // i18n — 다국어 번역
+    // ============================================================
+    const TRANSLATIONS = {
+      ko: {
+        headerSubtitle: 'Lightning으로 구독하기',
+        authTitle: '⚡ Lightning 지갑으로 로그인',
+        authDesc: 'Lightning 지갑으로 QR 코드를 스캔하여 인증하세요',
+        authCopyHint: '탭하여 복사',
+        authCopied: '복사됨!',
+        authWaiting: '인증 대기 중...',
+        authTimeout: '⏰ 인증 시간이 초과되었습니다',
+        authSessionFailed: '❌ 인증 세션 생성 실패',
+        authUserFailed: '❌ 사용자 생성 실패',
+        authStartFailed: '❌ 인증 시작 실패',
+        tierMonthly: '월간 구독',
+        tierMonthlyDesc: '매월 갱신',
+        tierAnnual: '연간 구독',
+        tierAnnualDesc: '연 1회 결제',
+        tierAnnualBadge: '2개월 무료',
+        tierLifetime: '평생 구독',
+        tierLifetimeDesc: '1회 결제, 영구 이용',
+        tierLifetimeBadge: '한정 {n}석',
+        tierSoldOut: '매진',
+        tierRemaining: '잔여 {n}석',
+        tierCurrentOrBelow: '현재 플랜 이하',
+        discountLabel: '할인코드',
+        discountPlaceholder: '코드 입력',
+        discountApply: '적용',
+        discountEmpty: '할인코드를 입력해주세요',
+        discountNotFound: '존재하지 않는 할인코드입니다',
+        discountExpired: '만료된 할인코드입니다',
+        discountMaxUsed: '사용 한도가 초과된 할인코드입니다',
+        discountNotApplicable: '이 구독 플랜에 적용할 수 없는 할인코드입니다',
+        discountApplied: '할인코드가 적용되었습니다!',
+        discountError: '할인코드 확인 중 오류가 발생했습니다',
+        priceOriginal: '원가',
+        priceCreditLabel: '잔여 {n}일 크레딧',
+        priceDiscount: '할인',
+        priceTotal: '결제 금액',
+        payButton: '⚡ Lightning으로 결제하기',
+        payCreating: '인보이스 생성 중...',
+        payWaiting: '결제 대기 중...',
+        payTimeout: '⏰ 결제 시간이 초과되었습니다',
+        payActivating: '구독 활성화 중...',
+        payActivateFailed: '⚠️ 결제는 완료되었으나 활성화에 실패했습니다. 앱에서 다시 확인해주세요.',
+        payLoginRequired: 'SYBA 앱에서 로그인 후 다시 시도해주세요.',
+        payServerError: '서버 연결 오류',
+        payStartFailed: '결제 시작에 실패했습니다. 다시 시도해주세요.',
+        payInvoiceFailed: '인보이스 생성 실패',
+        payRecordFailed: '결제 기록 생성 실패',
+        successTitle: '구독 완료!',
+        successDesc: 'SYBA 앱으로 돌아가면 프리미엄이 활성화됩니다.',
+        returnToApp: '📱 앱으로 돌아가기',
+        upgradeBanner: '현재 {tier} 구독 중 (잔여 {days}일) — 상위 플랜으로 업그레이드',
+        invoiceMemo: 'SYBA 프리미엄 {tier} {type}',
+        invoiceTypeNew: '구독',
+        invoiceTypeUpgrade: '업그레이드',
+        tierLabelMonthly: '월간',
+        tierLabelAnnual: '연간',
+        tierLabelLifetime: '평생',
+        perMonth: '/월',
+        perYear: '/년',
+        copied: '복사됨!',
+        downgradeError: '다운그레이드는 지원하지 않습니다',
+      },
+      en: {
+        headerSubtitle: 'Subscribe with Lightning',
+        authTitle: '⚡ Login with Lightning Wallet',
+        authDesc: 'Scan the QR code with your Lightning wallet to authenticate',
+        authCopyHint: 'Tap to copy',
+        authCopied: 'Copied!',
+        authWaiting: 'Waiting for authentication...',
+        authTimeout: '⏰ Authentication timed out',
+        authSessionFailed: '❌ Failed to create auth session',
+        authUserFailed: '❌ Failed to create user',
+        authStartFailed: '❌ Failed to start authentication',
+        tierMonthly: 'Monthly',
+        tierMonthlyDesc: 'Renews monthly',
+        tierAnnual: 'Annual',
+        tierAnnualDesc: 'Billed once a year',
+        tierAnnualBadge: '2 months free',
+        tierLifetime: 'Lifetime',
+        tierLifetimeDesc: 'One-time payment, forever access',
+        tierLifetimeBadge: 'Limited {n} seats',
+        tierSoldOut: 'Sold out',
+        tierRemaining: '{n} remaining',
+        tierCurrentOrBelow: 'Current plan or below',
+        discountLabel: 'Discount Code',
+        discountPlaceholder: 'Enter code',
+        discountApply: 'Apply',
+        discountEmpty: 'Please enter a discount code',
+        discountNotFound: 'Invalid discount code',
+        discountExpired: 'This discount code has expired',
+        discountMaxUsed: 'This discount code has reached its usage limit',
+        discountNotApplicable: 'This code cannot be applied to the selected plan',
+        discountApplied: 'Discount code applied!',
+        discountError: 'Error verifying discount code',
+        priceOriginal: 'Original',
+        priceCreditLabel: 'Credit for {n} remaining days',
+        priceDiscount: 'Discount',
+        priceTotal: 'Total',
+        payButton: '⚡ Pay with Lightning',
+        payCreating: 'Creating invoice...',
+        payWaiting: 'Waiting for payment...',
+        payTimeout: '⏰ Payment timed out',
+        payActivating: 'Activating subscription...',
+        payActivateFailed: '⚠️ Payment received but activation failed. Please check in the app.',
+        payLoginRequired: 'Please login in the SYBA app first.',
+        payServerError: 'Server connection error',
+        payStartFailed: 'Failed to start payment. Please try again.',
+        payInvoiceFailed: 'Failed to create invoice',
+        payRecordFailed: 'Failed to create payment record',
+        successTitle: 'Subscription Complete!',
+        successDesc: 'Return to the SYBA app to activate your premium features.',
+        returnToApp: '📱 Return to App',
+        upgradeBanner: 'Currently on {tier} plan ({days} days remaining) — Upgrade to a higher plan',
+        invoiceMemo: 'SYBA Premium {tier} {type}',
+        invoiceTypeNew: 'subscription',
+        invoiceTypeUpgrade: 'upgrade',
+        tierLabelMonthly: 'Monthly',
+        tierLabelAnnual: 'Annual',
+        tierLabelLifetime: 'Lifetime',
+        perMonth: '/mo',
+        perYear: '/yr',
+        copied: 'Copied!',
+        downgradeError: 'Downgrade is not supported',
+      },
+      es: {
+        headerSubtitle: 'Suscríbete con Lightning',
+        authTitle: '⚡ Iniciar sesión con Lightning Wallet',
+        authDesc: 'Escanea el código QR con tu billetera Lightning para autenticarte',
+        authCopyHint: 'Toca para copiar',
+        authCopied: '¡Copiado!',
+        authWaiting: 'Esperando autenticación...',
+        authTimeout: '⏰ Tiempo de autenticación agotado',
+        authSessionFailed: '❌ Error al crear sesión de autenticación',
+        authUserFailed: '❌ Error al crear usuario',
+        authStartFailed: '❌ Error al iniciar autenticación',
+        tierMonthly: 'Mensual',
+        tierMonthlyDesc: 'Renovación mensual',
+        tierAnnual: 'Anual',
+        tierAnnualDesc: 'Pago único anual',
+        tierAnnualBadge: '2 meses gratis',
+        tierLifetime: 'De por vida',
+        tierLifetimeDesc: 'Pago único, acceso permanente',
+        tierLifetimeBadge: 'Limitado a {n} plazas',
+        tierSoldOut: 'Agotado',
+        tierRemaining: '{n} restantes',
+        tierCurrentOrBelow: 'Plan actual o inferior',
+        discountLabel: 'Código de descuento',
+        discountPlaceholder: 'Ingresar código',
+        discountApply: 'Aplicar',
+        discountEmpty: 'Por favor ingresa un código de descuento',
+        discountNotFound: 'Código de descuento no válido',
+        discountExpired: 'Este código de descuento ha expirado',
+        discountMaxUsed: 'Este código ha alcanzado su límite de uso',
+        discountNotApplicable: 'Este código no se puede aplicar al plan seleccionado',
+        discountApplied: '¡Código de descuento aplicado!',
+        discountError: 'Error al verificar el código de descuento',
+        priceOriginal: 'Precio original',
+        priceCreditLabel: 'Crédito por {n} días restantes',
+        priceDiscount: 'Descuento',
+        priceTotal: 'Total a pagar',
+        payButton: '⚡ Pagar con Lightning',
+        payCreating: 'Creando factura...',
+        payWaiting: 'Esperando pago...',
+        payTimeout: '⏰ Tiempo de pago agotado',
+        payActivating: 'Activando suscripción...',
+        payActivateFailed: '⚠️ Pago recibido pero la activación falló. Verifica en la app.',
+        payLoginRequired: 'Inicia sesión en la app SYBA primero.',
+        payServerError: 'Error de conexión al servidor',
+        payStartFailed: 'No se pudo iniciar el pago. Inténtalo de nuevo.',
+        payInvoiceFailed: 'Error al crear la factura',
+        payRecordFailed: 'Error al crear el registro de pago',
+        successTitle: '¡Suscripción completada!',
+        successDesc: 'Vuelve a la app SYBA para activar tus funciones premium.',
+        returnToApp: '📱 Volver a la app',
+        upgradeBanner: 'Plan actual: {tier} ({days} días restantes) — Mejora a un plan superior',
+        invoiceMemo: 'SYBA Premium {tier} {type}',
+        invoiceTypeNew: 'suscripción',
+        invoiceTypeUpgrade: 'mejora',
+        tierLabelMonthly: 'Mensual',
+        tierLabelAnnual: 'Anual',
+        tierLabelLifetime: 'De por vida',
+        perMonth: '/mes',
+        perYear: '/año',
+        copied: '¡Copiado!',
+        downgradeError: 'No se permite la degradación del plan',
+      },
+      ja: {
+        headerSubtitle: 'Lightningで購読する',
+        authTitle: '⚡ Lightningウォレットでログイン',
+        authDesc: 'LightningウォレットでQRコードをスキャンして認証してください',
+        authCopyHint: 'タップしてコピー',
+        authCopied: 'コピーしました！',
+        authWaiting: '認証待機中...',
+        authTimeout: '⏰ 認証がタイムアウトしました',
+        authSessionFailed: '❌ 認証セッションの作成に失敗しました',
+        authUserFailed: '❌ ユーザーの作成に失敗しました',
+        authStartFailed: '❌ 認証の開始に失敗しました',
+        tierMonthly: '月額プラン',
+        tierMonthlyDesc: '毎月更新',
+        tierAnnual: '年間プラン',
+        tierAnnualDesc: '年1回の支払い',
+        tierAnnualBadge: '2ヶ月分お得',
+        tierLifetime: '永久プラン',
+        tierLifetimeDesc: '一度の支払いで永久利用',
+        tierLifetimeBadge: '限定{n}席',
+        tierSoldOut: '完売',
+        tierRemaining: '残り{n}席',
+        tierCurrentOrBelow: '現在のプラン以下',
+        discountLabel: '割引コード',
+        discountPlaceholder: 'コードを入力',
+        discountApply: '適用',
+        discountEmpty: '割引コードを入力してください',
+        discountNotFound: '無効な割引コードです',
+        discountExpired: 'この割引コードは期限切れです',
+        discountMaxUsed: 'この割引コードは使用上限に達しました',
+        discountNotApplicable: 'このコードは選択したプランに適用できません',
+        discountApplied: '割引コードが適用されました！',
+        discountError: '割引コードの確認中にエラーが発生しました',
+        priceOriginal: '定価',
+        priceCreditLabel: '残り{n}日分のクレジット',
+        priceDiscount: '割引',
+        priceTotal: '支払い金額',
+        payButton: '⚡ Lightningで支払う',
+        payCreating: 'インボイスを作成中...',
+        payWaiting: '支払い待機中...',
+        payTimeout: '⏰ 支払いがタイムアウトしました',
+        payActivating: 'サブスクリプションを有効化中...',
+        payActivateFailed: '⚠️ 支払いは完了しましたが有効化に失敗しました。アプリで確認してください。',
+        payLoginRequired: 'SYBAアプリでログインしてから再試行してください。',
+        payServerError: 'サーバー接続エラー',
+        payStartFailed: '支払いの開始に失敗しました。再試行してください。',
+        payInvoiceFailed: 'インボイスの作成に失敗しました',
+        payRecordFailed: '支払い記録の作成に失敗しました',
+        successTitle: '購読完了！',
+        successDesc: 'SYBAアプリに戻るとプレミアム機能が有効になります。',
+        returnToApp: '📱 アプリに戻る',
+        upgradeBanner: '現在{tier}プラン（残り{days}日）— 上位プランにアップグレード',
+        invoiceMemo: 'SYBAプレミアム {tier} {type}',
+        invoiceTypeNew: '購読',
+        invoiceTypeUpgrade: 'アップグレード',
+        tierLabelMonthly: '月額',
+        tierLabelAnnual: '年間',
+        tierLabelLifetime: '永久',
+        perMonth: '/月',
+        perYear: '/年',
+        copied: 'コピーしました！',
+        downgradeError: 'ダウングレードはサポートされていません',
+      },
+    };
+
+    let currentLang = 'ko';
+
+    // 번역 헬퍼
+    function t(key, replacements) {
+      let text = (TRANSLATIONS[currentLang] && TRANSLATIONS[currentLang][key])
+        ? TRANSLATIONS[currentLang][key]
+        : TRANSLATIONS['ko'][key] || key;
+      if (replacements) {
+        for (const [k, v] of Object.entries(replacements)) {
+          text = text.replace(new RegExp('\\{' + k + '\\}', 'g'), v);
+        }
+      }
+      return text;
+    }
+
+    // 정적 텍스트 번역 적용
+    function applyTranslations() {
+      document.getElementById('headerSubtitle').textContent = t('headerSubtitle');
+      document.getElementById('authTitle').textContent = t('authTitle');
+      document.getElementById('authDesc').textContent = t('authDesc');
+      document.getElementById('authCopyHint').textContent = t('authCopyHint');
+      document.getElementById('tierNameMonthly').textContent = t('tierMonthly');
+      document.getElementById('tierDescMonthly').textContent = t('tierMonthlyDesc');
+      document.getElementById('tierNameAnnual').textContent = t('tierAnnual');
+      document.getElementById('tierDescAnnual').textContent = t('tierAnnualDesc');
+      document.getElementById('annualBadge').textContent = t('tierAnnualBadge');
+      document.getElementById('tierNameLifetime').textContent = t('tierLifetime');
+      document.getElementById('tierDescLifetime').textContent = t('tierLifetimeDesc');
+      document.getElementById('discountLabel').textContent = t('discountLabel');
+      document.getElementById('discountInput').placeholder = t('discountPlaceholder');
+      document.getElementById('discountApplyBtn').textContent = t('discountApply');
+      document.getElementById('originalPriceLabel').textContent = t('priceOriginal');
+      document.getElementById('discountRowLabel').textContent = t('priceDiscount');
+      document.getElementById('totalLabel').textContent = t('priceTotal');
+      document.getElementById('payBtn').textContent = t('payButton');
+      document.getElementById('successTitle').textContent = t('successTitle');
+      document.getElementById('successDesc').textContent = t('successDesc');
+      document.getElementById('returnToAppBtn').textContent = t('returnToApp');
+      document.title = 'SYBA Premium';
+    }
+
+    // ============================================================
+    // Bech32 인코딩 (LNURL용)
+    // ============================================================
     const BECH32_CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
 
     function bech32Polymod(values) {
@@ -411,21 +700,12 @@
       return encoded.toUpperCase();
     }
 
-    // 현재 auth LNURL (복사용)
-    let currentAuthLnurlEncoded = null;
-
-    function copyAuthLnurl() {
-      if (!currentAuthLnurlEncoded) return;
-      navigator.clipboard.writeText(currentAuthLnurlEncoded).then(() => {
-        const msg = document.getElementById('authCopyMsg');
-        msg.classList.remove('hidden');
-        setTimeout(() => msg.classList.add('hidden'), 2000);
-      });
-    }
-
+    // ============================================================
     // State
+    // ============================================================
+    let currentAuthLnurlEncoded = null;
     let currentTier = 'monthly';
-    let currentDiscount = null; // { id, discount_type, discount_value }
+    let currentDiscount = null;
     let tierPrices = {
       monthly:  { price: 1000,  durationDays: 30  },
       annual:   { price: 10000, durationDays: 365 },
@@ -438,18 +718,28 @@
 
     // 업그레이드 관련 상태
     let isUpgradeMode = false;
-    let currentSubscription = null; // 기존 활성 구독
-    let upgradeCredit = 0;          // 프로레이타 크레딧
-    let upgradePaidAmount = 0;      // 기존 구독 실결제 금액
+    let currentSubscription = null;
+    let upgradeCredit = 0;
+    let upgradePaidAmount = 0;
     const TIER_RANK = { monthly: 1, annual: 2, lifetime: 3 };
 
     // ============================================================
-    // LNURL-auth 헬퍼 (uid 없을 때 웹에서 직접 인증)
+    // LNURL-auth
     // ============================================================
     function generateRandomHex(bytes) {
       const arr = new Uint8Array(bytes);
       crypto.getRandomValues(arr);
       return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function copyAuthLnurl() {
+      if (!currentAuthLnurlEncoded) return;
+      navigator.clipboard.writeText(currentAuthLnurlEncoded).then(() => {
+        const msg = document.getElementById('authCopyMsg');
+        msg.textContent = t('authCopied');
+        msg.classList.remove('hidden');
+        setTimeout(() => msg.classList.add('hidden'), 2000);
+      });
     }
 
     async function startLnurlAuth() {
@@ -458,17 +748,13 @@
       const authSection = document.getElementById('authSection');
       authSection.classList.add('visible');
 
-      // 결제 UI 숨기기
       document.getElementById('tierSection').style.display = 'none';
       document.querySelector('.discount-section').style.display = 'none';
       document.getElementById('priceSummary').style.display = 'none';
       document.getElementById('payBtn').style.display = 'none';
 
       try {
-        // k1 challenge 생성
         const k1 = generateRandomHex(32);
-
-        // lnurl_auth_sessions 테이블에 세션 생성
         const { data: session, error } = await supabaseClient
           .from('lnurl_auth_sessions')
           .insert({ k1, status: 'pending' })
@@ -476,17 +762,13 @@
           .single();
 
         if (error || !session) {
-          document.getElementById('authStatus').textContent = '❌ 인증 세션 생성 실패';
+          document.getElementById('authStatus').textContent = t('authSessionFailed');
           return;
         }
 
-        // LNURL-auth callback URL (Vercel 프록시 경유)
         const callbackUrl = `${window.location.origin}/api/lnurl-auth?tag=login&k1=${k1}&action=login`;
-
-        // Bech32 인코딩 (Lightning 지갑이 LNURL로 인식)
         currentAuthLnurlEncoded = encodeLnurl(callbackUrl);
 
-        // QR 코드 표시 (bech32 인코딩된 LNURL)
         new QRious({
           element: document.getElementById('authQrCanvas'),
           value: currentAuthLnurlEncoded,
@@ -494,7 +776,8 @@
           level: 'M',
         });
 
-        // 인증 완료 폴링 (2초 간격, 최대 5분)
+        document.getElementById('authStatus').innerHTML = `<span class="spinner"></span> ${t('authWaiting')}`;
+
         const maxAttempts = 150;
         let attempts = 0;
 
@@ -502,7 +785,7 @@
           attempts++;
           if (attempts > maxAttempts) {
             clearInterval(authPoll);
-            document.getElementById('authStatus').textContent = '⏰ 인증 시간이 초과되었습니다';
+            document.getElementById('authStatus').textContent = t('authTimeout');
             return;
           }
 
@@ -516,7 +799,6 @@
             if (updated && updated.status === 'authenticated' && updated.linking_key) {
               clearInterval(authPoll);
 
-              // linking_key로 사용자 조회 또는 생성
               const { data: existingUser } = await supabaseClient
                 .from('users')
                 .select('*')
@@ -535,7 +817,6 @@
               }
 
               if (userId) {
-                // 인증 성공 → 결제 UI 표시
                 authSection.classList.remove('visible');
                 document.getElementById('tierSection').style.display = '';
                 document.querySelector('.discount-section').style.display = '';
@@ -543,7 +824,7 @@
                 document.getElementById('payBtn').style.display = '';
                 document.getElementById('authStatus').textContent = '';
               } else {
-                document.getElementById('authStatus').textContent = '❌ 사용자 생성 실패';
+                document.getElementById('authStatus').textContent = t('authUserFailed');
               }
             }
           } catch (e) {
@@ -553,17 +834,26 @@
 
       } catch (e) {
         console.error('LNURL-auth 시작 실패:', e);
-        document.getElementById('authStatus').textContent = '❌ 인증 시작 실패';
+        document.getElementById('authStatus').textContent = t('authStartFailed');
       }
     }
 
+    // ============================================================
     // Init
+    // ============================================================
     window.addEventListener('DOMContentLoaded', async () => {
-      // URL params
       const params = new URLSearchParams(window.location.search);
       userId = params.get('uid');
       const tierParam = params.get('tier');
       const upgradeParam = params.get('upgrade');
+      const langParam = params.get('lang');
+
+      // 언어 설정
+      if (langParam && TRANSLATIONS[langParam]) {
+        currentLang = langParam;
+      }
+      document.documentElement.lang = currentLang;
+      applyTranslations();
 
       // Init Supabase
       if (SUPABASE_URL && SUPABASE_ANON_KEY) {
@@ -588,10 +878,11 @@
       }
     });
 
-    // 업그레이드 모드 초기화: 기존 구독 + 결제 기록 조회 → 크레딧 계산
+    // ============================================================
+    // 업그레이드 모드
+    // ============================================================
     async function initUpgradeMode() {
       try {
-        // 기존 활성 구독 조회
         const { data: sub } = await supabaseClient
           .from('subscriptions')
           .select('*')
@@ -606,7 +897,6 @@
         currentSubscription = sub;
         isUpgradeMode = true;
 
-        // 현재 티어의 최근 paid 결제 조회 (실결제 금액 확인)
         const { data: lastPayment } = await supabaseClient
           .from('payments')
           .select('*')
@@ -619,7 +909,6 @@
 
         upgradePaidAmount = lastPayment?.amount_sats ?? 0;
 
-        // 잔여일 계산
         const now = new Date();
         let remainingDays = 0;
         if (sub.expires_at) {
@@ -629,7 +918,6 @@
           }
         }
 
-        // 크레딧 계산: 실결제 금액 기준
         const currentDurationDays = tierPrices[sub.tier]?.durationDays ?? 365;
         if (upgradePaidAmount > 0 && currentDurationDays > 0 && remainingDays > 0) {
           const dailyRate = upgradePaidAmount / currentDurationDays;
@@ -637,9 +925,9 @@
         }
 
         // 배너 표시
-        const tierNames = { monthly: '월간', annual: '연간', lifetime: '평생' };
+        const tierLabel = t('tierLabel' + sub.tier.charAt(0).toUpperCase() + sub.tier.slice(1));
         const banner = document.getElementById('upgradeBanner');
-        banner.textContent = `현재 ${tierNames[sub.tier]} 구독 중 (잔여 ${remainingDays}일) — 상위 플랜으로 업그레이드`;
+        banner.textContent = t('upgradeBanner', { tier: tierLabel, days: remainingDays });
         banner.classList.add('visible');
 
         // 현재 티어 이하 비활성화
@@ -648,6 +936,9 @@
           if (TIER_RANK[cardTier] <= TIER_RANK[sub.tier]) {
             card.classList.add('disabled');
             card.classList.remove('selected');
+            // 비활성화된 카드에 설명 추가
+            const desc = card.querySelector('.tier-desc');
+            if (desc) desc.setAttribute('data-disabled-text', t('tierCurrentOrBelow'));
           }
         });
 
@@ -657,6 +948,9 @@
       }
     }
 
+    // ============================================================
+    // 가격 로드
+    // ============================================================
     async function loadPricesFromDB() {
       if (!supabaseClient) return;
       try {
@@ -666,7 +960,6 @@
           .eq('is_active', true);
 
         if (data && data.length > 0) {
-          // DB의 price_sats를 직접 사용 (admin에서 수정한 값이 바로 반영됨)
           data.forEach(p => {
             tierPrices[p.tier] = {
               price: p.price_sats,
@@ -676,22 +969,24 @@
             };
           });
 
-          // Update lifetime badge
+          // Lifetime 배지 업데이트
           const lt = tierPrices.lifetime;
           if (lt.maxQuantity && lt.maxQuantity !== -1) {
             const remaining = lt.maxQuantity - (lt.currentSold || 0);
             const badge = document.getElementById('lifetime-badge');
             if (remaining <= 0) {
-              badge.textContent = '매진';
+              badge.textContent = t('tierSoldOut');
               document.querySelector('[data-tier="lifetime"]').classList.add('sold-out');
             } else {
-              badge.textContent = `잔여 ${remaining}석`;
+              badge.textContent = t('tierRemaining', { n: remaining });
             }
+          } else {
+            document.getElementById('lifetime-badge').textContent = t('tierLifetimeBadge', { n: lt.maxQuantity || 50 });
           }
 
-          // Update price labels
-          document.getElementById('price-monthly').textContent = `${tierPrices.monthly.price.toLocaleString()} sats/월`;
-          document.getElementById('price-annual').textContent = `${tierPrices.annual.price.toLocaleString()} sats/년`;
+          // 가격 라벨 업데이트
+          document.getElementById('price-monthly').textContent = `${tierPrices.monthly.price.toLocaleString()} sats${t('perMonth')}`;
+          document.getElementById('price-annual').textContent = `${tierPrices.annual.price.toLocaleString()} sats${t('perYear')}`;
           document.getElementById('price-lifetime').textContent = `${tierPrices.lifetime.price.toLocaleString()} sats`;
         }
       } catch (e) {
@@ -699,83 +994,14 @@
       }
     }
 
+    // ============================================================
+    // 티어 선택 & 가격 표시
+    // ============================================================
     function selectTier(tier) {
       currentTier = tier;
       document.querySelectorAll('.tier-card').forEach(c => c.classList.remove('selected'));
       document.querySelector(`[data-tier="${tier}"]`).classList.add('selected');
       updatePriceDisplay();
-    }
-
-    async function applyDiscount() {
-      const code = document.getElementById('discountInput').value.trim();
-      const msgEl = document.getElementById('discountMsg');
-
-      if (!code) {
-        msgEl.textContent = '할인코드를 입력해주세요';
-        msgEl.className = 'discount-msg error';
-        return;
-      }
-
-      if (!supabaseClient) {
-        msgEl.textContent = '서버 연결 오류';
-        msgEl.className = 'discount-msg error';
-        return;
-      }
-
-      try {
-        const { data, error } = await supabaseClient
-          .from('discount_codes')
-          .select('*')
-          .ilike('code', code)
-          .eq('is_active', true)
-          .single();
-
-        if (error || !data) {
-          currentDiscount = null;
-          msgEl.textContent = '존재하지 않는 할인코드입니다';
-          msgEl.className = 'discount-msg error';
-          updatePriceDisplay();
-          return;
-        }
-
-        const now = new Date();
-        if (new Date(data.valid_until) < now) {
-          msgEl.textContent = '만료된 할인코드입니다';
-          msgEl.className = 'discount-msg error';
-          currentDiscount = null;
-          updatePriceDisplay();
-          return;
-        }
-
-        if (data.max_uses !== -1 && data.current_uses >= data.max_uses) {
-          msgEl.textContent = '사용 한도가 초과된 할인코드입니다';
-          msgEl.className = 'discount-msg error';
-          currentDiscount = null;
-          updatePriceDisplay();
-          return;
-        }
-
-        if (!data.applicable_tiers.includes(currentTier)) {
-          msgEl.textContent = '이 구독 플랜에 적용할 수 없는 할인코드입니다';
-          msgEl.className = 'discount-msg error';
-          currentDiscount = null;
-          updatePriceDisplay();
-          return;
-        }
-
-        currentDiscount = {
-          id: data.id,
-          discount_type: data.discount_type,
-          discount_value: data.discount_value,
-        };
-
-        msgEl.textContent = '할인코드가 적용되었습니다!';
-        msgEl.className = 'discount-msg success';
-        updatePriceDisplay();
-      } catch (e) {
-        msgEl.textContent = '할인코드 확인 중 오류가 발생했습니다';
-        msgEl.className = 'discount-msg error';
-      }
     }
 
     function updatePriceDisplay() {
@@ -789,7 +1015,6 @@
       if (isUpgradeMode && upgradeCredit > 0 && currentSubscription && TIER_RANK[currentTier] > TIER_RANK[currentSubscription.tier]) {
         priceAfterCredit = Math.max(basePrice - upgradeCredit, 1);
 
-        // 잔여일 계산 (표시용)
         const now = new Date();
         const expiresAt = new Date(currentSubscription.expires_at);
         const remainingDays = Math.max(0, Math.ceil((expiresAt.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)));
@@ -797,13 +1022,13 @@
         origRow.style.display = 'flex';
         document.getElementById('originalPriceText').textContent = `${basePrice.toLocaleString()} sats`;
         creditRow.style.display = 'flex';
-        document.getElementById('creditLabel').textContent = `잔여 ${remainingDays}일 크레딧`;
+        document.getElementById('creditLabel').textContent = t('priceCreditLabel', { n: remainingDays });
         document.getElementById('creditText').textContent = `-${upgradeCredit.toLocaleString()} sats`;
       } else {
         creditRow.style.display = 'none';
       }
 
-      // 할인코드 적용 (크레딧 차감 후 금액에 적용)
+      // 할인코드 적용
       let discountAmount = 0;
       if (currentDiscount) {
         if (currentDiscount.discount_type === 'percent') {
@@ -832,29 +1057,108 @@
       document.getElementById('finalPriceText').textContent = `${finalPrice.toLocaleString()} sats`;
     }
 
+    // ============================================================
+    // 할인코드
+    // ============================================================
+    async function applyDiscount() {
+      const code = document.getElementById('discountInput').value.trim();
+      const msgEl = document.getElementById('discountMsg');
+
+      if (!code) {
+        msgEl.textContent = t('discountEmpty');
+        msgEl.className = 'discount-msg error';
+        return;
+      }
+
+      if (!supabaseClient) {
+        msgEl.textContent = t('payServerError');
+        msgEl.className = 'discount-msg error';
+        return;
+      }
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('discount_codes')
+          .select('*')
+          .ilike('code', code)
+          .eq('is_active', true)
+          .single();
+
+        if (error || !data) {
+          currentDiscount = null;
+          msgEl.textContent = t('discountNotFound');
+          msgEl.className = 'discount-msg error';
+          updatePriceDisplay();
+          return;
+        }
+
+        const now = new Date();
+        if (new Date(data.valid_until) < now) {
+          msgEl.textContent = t('discountExpired');
+          msgEl.className = 'discount-msg error';
+          currentDiscount = null;
+          updatePriceDisplay();
+          return;
+        }
+
+        if (data.max_uses !== -1 && data.current_uses >= data.max_uses) {
+          msgEl.textContent = t('discountMaxUsed');
+          msgEl.className = 'discount-msg error';
+          currentDiscount = null;
+          updatePriceDisplay();
+          return;
+        }
+
+        if (!data.applicable_tiers.includes(currentTier)) {
+          msgEl.textContent = t('discountNotApplicable');
+          msgEl.className = 'discount-msg error';
+          currentDiscount = null;
+          updatePriceDisplay();
+          return;
+        }
+
+        currentDiscount = {
+          id: data.id,
+          discount_type: data.discount_type,
+          discount_value: data.discount_value,
+        };
+
+        msgEl.textContent = t('discountApplied');
+        msgEl.className = 'discount-msg success';
+        updatePriceDisplay();
+      } catch (e) {
+        msgEl.textContent = t('discountError');
+        msgEl.className = 'discount-msg error';
+      }
+    }
+
+    // ============================================================
+    // 결제
+    // ============================================================
     async function startPayment() {
       const btn = document.getElementById('payBtn');
       btn.disabled = true;
-      btn.innerHTML = '<span class="spinner"></span> 인보이스 생성 중...';
+      btn.innerHTML = `<span class="spinner"></span> ${t('payCreating')}`;
 
       try {
         if (!userId) {
-          alert('SYBA 앱에서 로그인 후 다시 시도해주세요.');
+          alert(t('payLoginRequired'));
           btn.disabled = false;
-          btn.textContent = '⚡ Lightning으로 결제하기';
+          btn.textContent = t('payButton');
           return;
         }
 
         if (!supabaseClient) {
-          alert('서버 연결 오류');
+          alert(t('payServerError'));
           btn.disabled = false;
-          btn.textContent = '⚡ Lightning으로 결제하기';
+          btn.textContent = t('payButton');
           return;
         }
 
-        // Create payment via Blink proxy edge function
-        const tierLabel = currentTier === 'monthly' ? '월간' : currentTier === 'annual' ? '연간' : '평생';
-        const invoiceMemo = isUpgradeMode ? `SYBA 프리미엄 ${tierLabel} 업그레이드` : `SYBA 프리미엄 ${tierLabel} 구독`;
+        const tierLabel = t('tierLabel' + currentTier.charAt(0).toUpperCase() + currentTier.slice(1));
+        const typeLabel = isUpgradeMode ? t('invoiceTypeUpgrade') : t('invoiceTypeNew');
+        const invoiceMemo = t('invoiceMemo', { tier: tierLabel, type: typeLabel });
+
         const { data: invoiceData, error: invoiceError } = await supabaseClient.functions.invoke('blink-proxy', {
           body: {
             action: 'createInvoice',
@@ -863,14 +1167,12 @@
           },
         });
 
-        // Edge Function 응답: { success, data: { paymentHash, paymentRequest, satoshis } }
         const invoice = invoiceData?.data;
         if (invoiceError || !invoice?.paymentRequest) {
           console.error('Invoice error:', invoiceError, invoiceData);
-          throw new Error('인보이스 생성 실패');
+          throw new Error(t('payInvoiceFailed'));
         }
 
-        // Create payment record
         const { data: payment, error: payError } = await supabaseClient
           .from('payments')
           .insert({
@@ -889,7 +1191,7 @@
           .select()
           .single();
 
-        if (payError) throw new Error('결제 기록 생성 실패');
+        if (payError) throw new Error(t('payRecordFailed'));
 
         currentInvoice = {
           paymentRequest: invoice.paymentRequest,
@@ -897,16 +1199,13 @@
           paymentId: payment.id,
         };
 
-        // Show QR
         showQR(invoice.paymentRequest);
-
-        // Start polling
         pollPayment();
       } catch (e) {
         console.error('결제 시작 실패:', e);
-        alert('결제 시작에 실패했습니다. 다시 시도해주세요.');
+        alert(t('payStartFailed'));
         btn.disabled = false;
-        btn.textContent = '⚡ Lightning으로 결제하기';
+        btn.textContent = t('payButton');
       }
     }
 
@@ -919,13 +1218,14 @@
       const qrSection = document.getElementById('qrSection');
       qrSection.classList.add('visible');
 
-      const qr = new QRious({
+      new QRious({
         element: document.getElementById('qrCanvas'),
         value: invoice,
         size: 240,
         level: 'M',
       });
 
+      document.getElementById('statusText').innerHTML = `<span class="spinner"></span> ${t('payWaiting')}`;
       document.getElementById('invoicePreview').textContent = invoice;
     }
 
@@ -933,6 +1233,7 @@
       if (!currentInvoice) return;
       navigator.clipboard.writeText(currentInvoice.paymentRequest).then(() => {
         const msg = document.getElementById('copyMsg');
+        msg.textContent = t('copied');
         msg.classList.remove('hidden');
         setTimeout(() => msg.classList.add('hidden'), 2000);
       });
@@ -941,19 +1242,18 @@
     async function pollPayment() {
       if (!currentInvoice || !supabaseClient) return;
 
-      const maxAttempts = 400; // 10분 (1.5초 간격)
+      const maxAttempts = 400;
       let attempts = 0;
 
       const poll = setInterval(async () => {
         attempts++;
         if (attempts > maxAttempts) {
           clearInterval(poll);
-          document.getElementById('statusText').innerHTML = '⏰ 결제 시간이 초과되었습니다';
+          document.getElementById('statusText').innerHTML = t('payTimeout');
           return;
         }
 
         try {
-          // Check via Blink proxy (Edge Function 응답: { success, data: 'PAID'|'PENDING'|'EXPIRED' })
           const { data } = await supabaseClient.functions.invoke('blink-proxy', {
             body: {
               action: 'checkPaymentStatus',
@@ -966,29 +1266,36 @@
             await completePayment();
           }
         } catch (e) {
-          // Ignore polling errors, keep trying
+          // 폴링 에러 무시
         }
       }, 1500);
     }
 
     async function completePayment() {
-      document.getElementById('statusText').innerHTML = '<span class="spinner"></span> 구독 활성화 중...';
+      document.getElementById('statusText').innerHTML = `<span class="spinner"></span> ${t('payActivating')}`;
 
       try {
-        // Update payment status
         await supabaseClient
           .from('payments')
           .update({ status: 'paid', paid_at: new Date().toISOString() })
           .eq('id', currentInvoice.paymentId);
 
-        // Activate subscription
+        // 할인코드 사용 횟수 증가
+        if (currentDiscount) {
+          const code = document.getElementById('discountInput').value.trim();
+          if (code) {
+            try { await supabaseClient.rpc('use_discount_code', { p_code: code }); }
+            catch (e) { console.error('할인코드 사용 카운트 실패:', e); }
+          }
+        }
+
+        // 구독 활성화
         const isLifetime = currentTier === 'lifetime';
         const durationDays = tierPrices[currentTier].durationDays;
 
         const now = new Date();
         const expiresAt = isLifetime ? null : new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000).toISOString();
 
-        // Check existing subscription
         const { data: existing } = await supabaseClient
           .from('subscriptions')
           .select('*')
@@ -1000,20 +1307,16 @@
         if (existing && existing.status === 'active') {
           let updateData;
           if (isLifetime) {
-            // lifetime 업그레이드
             updateData = { tier: 'lifetime', is_lifetime: true, expires_at: null };
           } else if (TIER_RANK[currentTier] > TIER_RANK[existing.tier]) {
-            // 업그레이드: fresh 기간 시작
             const freshExpiry = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000).toISOString();
             updateData = { tier: currentTier, expires_at: freshExpiry };
           } else if (currentTier === existing.tier) {
-            // 동일 티어 갱신: 기존 만료일에서 연장
             const currentExpiry = new Date(existing.expires_at);
             const extendedExpiry = currentExpiry > now ? new Date(currentExpiry.getTime() + durationDays * 24 * 60 * 60 * 1000) : new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
             updateData = { tier: currentTier, expires_at: extendedExpiry.toISOString() };
           } else {
-            // 다운그레이드 차단 (여기까지 오면 안 됨)
-            throw new Error('다운그레이드는 지원하지 않습니다');
+            throw new Error(t('downgradeError'));
           }
 
           await supabaseClient
@@ -1021,7 +1324,6 @@
             .update(updateData)
             .eq('id', existing.id);
         } else {
-          // Create new
           await supabaseClient
             .from('subscriptions')
             .insert({
@@ -1034,17 +1336,17 @@
             });
         }
 
-        // Increment tier sold count if limited
+        // 한정판 판매 수 증가
         if (tierPrices[currentTier].maxQuantity && tierPrices[currentTier].maxQuantity !== -1) {
           await supabaseClient.rpc('increment_tier_sold', { p_tier: currentTier });
         }
 
-        // Show success
+        // 성공 표시
         document.getElementById('qrSection').classList.remove('visible');
         document.getElementById('successSection').classList.add('visible');
       } catch (e) {
         console.error('구독 활성화 실패:', e);
-        document.getElementById('statusText').innerHTML = '⚠️ 결제는 완료되었으나 활성화에 실패했습니다. 앱에서 다시 확인해주세요.';
+        document.getElementById('statusText').innerHTML = t('payActivateFailed');
       }
     }
   </script>
