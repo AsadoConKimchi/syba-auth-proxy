@@ -1336,11 +1336,6 @@
             });
         }
 
-        // 한정판 판매 수 증가
-        if (tierPrices[currentTier].maxQuantity && tierPrices[currentTier].maxQuantity !== -1) {
-          await supabaseClient.rpc('increment_tier_sold', { p_tier: currentTier });
-        }
-
         // 성공 표시
         document.getElementById('qrSection').classList.remove('visible');
         document.getElementById('successSection').classList.add('visible');
