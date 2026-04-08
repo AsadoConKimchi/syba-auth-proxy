@@ -1,14 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSession, COOKIE_NAME } from '@/lib/auth';
 
+// 레이트 리밋: IP별 로그인 시도 제한
+const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_MAX = 5;        // 최대 5회
+const RATE_LIMIT_WINDOW = 5 * 60 * 1000; // 5분
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = loginAttempts.get(ip);
+
+  if (!entry || now > entry.resetAt) {
+    loginAttempts.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
+    return false;
+  }
+
+  entry.count++;
+  return entry.count > RATE_LIMIT_MAX;
+}
+
 // 비밀번호 로그인
 export async function POST(req: NextRequest) {
   try {
+    // 레이트 리밋 체크
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || req.headers.get('x-real-ip')
+      || 'unknown';
+
+    if (checkRateLimit(ip)) {
+      return NextResponse.json(
+        { error: 'Too many login attempts. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
     const { password } = await req.json();
 
     if (password !== process.env.ADMIN_PASSWORD) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // 로그인 성공 시 카운터 리셋
+    loginAttempts.delete(ip);
 
     const token = await createSession();
 

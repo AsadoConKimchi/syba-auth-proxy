@@ -1140,6 +1140,13 @@
       btn.disabled = true;
       btn.innerHTML = `<span class="spinner"></span> ${t('payCreating')}`;
 
+      // 결제 시작 시점의 상태를 캡처 (전역 변수 경쟁 조건 방지)
+      const capturedPrice = finalPrice;
+      const capturedTier = currentTier;
+      const capturedDiscount = currentDiscount ? { ...currentDiscount } : null;
+      const capturedUpgradeMode = isUpgradeMode;
+      const capturedUpgradeCredit = upgradeCredit;
+
       try {
         if (!userId) {
           alert(t('payLoginRequired'));
@@ -1155,14 +1162,14 @@
           return;
         }
 
-        const tierLabel = t('tierLabel' + currentTier.charAt(0).toUpperCase() + currentTier.slice(1));
-        const typeLabel = isUpgradeMode ? t('invoiceTypeUpgrade') : t('invoiceTypeNew');
+        const tierLabel = t('tierLabel' + capturedTier.charAt(0).toUpperCase() + capturedTier.slice(1));
+        const typeLabel = capturedUpgradeMode ? t('invoiceTypeUpgrade') : t('invoiceTypeNew');
         const invoiceMemo = t('invoiceMemo', { tier: tierLabel, type: typeLabel });
 
         const { data: invoiceData, error: invoiceError } = await supabaseClient.functions.invoke('blink-proxy', {
           body: {
             action: 'createInvoice',
-            amountSats: finalPrice,
+            amountSats: capturedPrice,
             memo: invoiceMemo,
           },
         });
@@ -1173,20 +1180,26 @@
           throw new Error(t('payInvoiceFailed'));
         }
 
+        // 인보이스 금액 검증: Blink가 반환한 금액과 요청 금액 일치 확인
+        if (invoice.satoshis !== undefined && invoice.satoshis !== capturedPrice) {
+          console.error('Invoice amount mismatch:', invoice.satoshis, '!==', capturedPrice);
+          throw new Error(t('payInvoiceFailed'));
+        }
+
         const { data: payment, error: payError } = await supabaseClient
           .from('payments')
           .insert({
             user_id: userId,
-            amount_sats: finalPrice,
-            tier: currentTier,
-            original_price_sats: tierPrices[currentTier].price,
-            discount_code_id: currentDiscount?.id || null,
-            discount_amount_sats: tierPrices[currentTier].price - finalPrice,
+            amount_sats: capturedPrice,
+            tier: capturedTier,
+            original_price_sats: tierPrices[capturedTier].price,
+            discount_code_id: capturedDiscount?.id || null,
+            discount_amount_sats: tierPrices[capturedTier].price - capturedPrice,
             lightning_invoice: invoice.paymentRequest,
             payment_hash: invoice.paymentHash,
             status: 'pending',
-            is_upgrade: isUpgradeMode,
-            upgrade_credit_sats: isUpgradeMode ? upgradeCredit : 0,
+            is_upgrade: capturedUpgradeMode,
+            upgrade_credit_sats: capturedUpgradeMode ? capturedUpgradeCredit : 0,
           })
           .select()
           .single();
@@ -1197,6 +1210,7 @@
           paymentRequest: invoice.paymentRequest,
           paymentHash: invoice.paymentHash,
           paymentId: payment.id,
+          discountCode: capturedDiscount ? document.getElementById('discountInput').value.trim() : null,
         };
 
         showQR(invoice.paymentRequest);
@@ -1275,65 +1289,18 @@
       document.getElementById('statusText').innerHTML = `<span class="spinner"></span> ${t('payActivating')}`;
 
       try {
-        await supabaseClient
-          .from('payments')
-          .update({ status: 'paid', paid_at: new Date().toISOString() })
-          .eq('id', currentInvoice.paymentId);
+        // 서버사이드 Edge Function으로 결제 완료 처리
+        // 서버에서 Blink 결제 확인 → payment 상태 업데이트 → 구독 활성화
+        const { data: completeData, error: completeError } = await supabaseClient.functions.invoke('complete-payment', {
+          body: {
+            paymentId: currentInvoice.paymentId,
+            discountCode: currentInvoice.discountCode || null,
+          },
+        });
 
-        // 할인코드 사용 횟수 증가
-        if (currentDiscount) {
-          const code = document.getElementById('discountInput').value.trim();
-          if (code) {
-            try { await supabaseClient.rpc('use_discount_code', { p_code: code }); }
-            catch (e) { console.error('할인코드 사용 카운트 실패:', e); }
-          }
-        }
-
-        // 구독 활성화
-        const isLifetime = currentTier === 'lifetime';
-        const durationDays = tierPrices[currentTier].durationDays;
-
-        const now = new Date();
-        const expiresAt = isLifetime ? null : new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000).toISOString();
-
-        const { data: existing } = await supabaseClient
-          .from('subscriptions')
-          .select('*')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-
-        if (existing && existing.status === 'active') {
-          let updateData;
-          if (isLifetime) {
-            updateData = { tier: 'lifetime', is_lifetime: true, expires_at: null };
-          } else if (TIER_RANK[currentTier] > TIER_RANK[existing.tier]) {
-            const freshExpiry = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000).toISOString();
-            updateData = { tier: currentTier, expires_at: freshExpiry };
-          } else if (currentTier === existing.tier) {
-            const currentExpiry = new Date(existing.expires_at);
-            const extendedExpiry = currentExpiry > now ? new Date(currentExpiry.getTime() + durationDays * 24 * 60 * 60 * 1000) : new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
-            updateData = { tier: currentTier, expires_at: extendedExpiry.toISOString() };
-          } else {
-            throw new Error(t('downgradeError'));
-          }
-
-          await supabaseClient
-            .from('subscriptions')
-            .update(updateData)
-            .eq('id', existing.id);
-        } else {
-          await supabaseClient
-            .from('subscriptions')
-            .insert({
-              user_id: userId,
-              status: 'active',
-              tier: currentTier,
-              is_lifetime: isLifetime,
-              started_at: now.toISOString(),
-              expires_at: expiresAt,
-            });
+        if (completeError || !completeData?.success) {
+          console.error('결제 완료 처리 실패:', completeError, completeData);
+          throw new Error(completeData?.error || t('payActivateFailed'));
         }
 
         // 성공 표시
