@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SYBA — Account & Data Deletion</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0A0A0A; color: #E0E0E0;
+      min-height: 100vh; padding: 24px;
+      display: flex; justify-content: center;
+    }
+    .container { max-width: 640px; width: 100%; padding-top: 40px; }
+    .logo { text-align: center; margin-bottom: 32px; }
+    .logo span { font-size: 28px; font-weight: 700; color: #F7931A; }
+    h1 { font-size: 22px; color: #fff; margin-bottom: 16px; }
+    h2 { font-size: 18px; color: #F7931A; margin: 28px 0 12px; }
+    p, li { font-size: 15px; line-height: 1.7; color: #B0B0B0; margin-bottom: 10px; }
+    ul { padding-left: 20px; margin-bottom: 16px; }
+    .card {
+      background: #1A1A1A; border-radius: 12px;
+      padding: 20px; margin-bottom: 20px;
+      border: 1px solid #2A2A2A;
+    }
+    .step { display: flex; gap: 12px; margin-bottom: 14px; }
+    .step-num {
+      background: #F7931A; color: #000; font-weight: 700;
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 14px;
+    }
+    .note {
+      background: #1a1206; border: 1px solid #F7931A33;
+      border-radius: 8px; padding: 14px; margin-top: 16px;
+    }
+    .note p { color: #F7931A; margin: 0; font-size: 14px; }
+    .contact {
+      margin-top: 32px; text-align: center;
+      padding: 20px; border-top: 1px solid #2A2A2A;
+    }
+    .contact a { color: #F7931A; text-decoration: none; }
+    .lang-switch {
+      text-align: center; margin-bottom: 24px;
+      display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+    }
+    .lang-btn {
+      background: #1A1A1A; border: 1px solid #333; color: #999;
+      padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 13px;
+    }
+    .lang-btn.active { border-color: #F7931A; color: #F7931A; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo"><span>SYBA</span></div>
+
+    <div class="lang-switch">
+      <button class="lang-btn active" onclick="setLang('en')">English</button>
+      <button class="lang-btn" onclick="setLang('ko')">한국어</button>
+      <button class="lang-btn" onclick="setLang('es')">Español</button>
+      <button class="lang-btn" onclick="setLang('ja')">日本語</button>
+    </div>
+
+    <div id="content-en">
+      <h1>Account & Data Deletion</h1>
+
+      <h2>How SYBA Stores Your Data</h2>
+      <div class="card">
+        <p>SYBA is a <strong>privacy-first</strong> app. All your financial data (assets, records, loans, cards, snapshots) is stored <strong>locally on your device only</strong>, encrypted with your password.</p>
+        <p>Our server only stores minimal subscription-related data: your Lightning public key (linking_key), subscription status, and payment history.</p>
+      </div>
+
+      <h2>Delete Local App Data</h2>
+      <div class="card">
+        <p>To delete all locally stored data from your device:</p>
+        <div class="step"><div class="step-num">1</div><p>Open SYBA app</p></div>
+        <div class="step"><div class="step-num">2</div><p>Go to <strong>Settings</strong> tab</p></div>
+        <div class="step"><div class="step-num">3</div><p>Tap <strong>Data Management</strong></p></div>
+        <div class="step"><div class="step-num">4</div><p>Tap <strong>Reset App Data</strong></p></div>
+        <p>This permanently deletes all assets, records, loans, cards, and snapshots. Your password and app settings are preserved.</p>
+        <div class="note"><p>Alternatively, you can uninstall the app to remove all data from your device.</p></div>
+      </div>
+
+      <h2>Delete Server Account</h2>
+      <div class="card">
+        <p>To delete your server-side account and all associated data (subscription records, payment history, linking key):</p>
+        <p>Send an email to <a href="mailto:syba.sats@gmail.com" style="color:#F7931A">syba.sats@gmail.com</a> with the subject <strong>"Account Deletion Request"</strong>.</p>
+        <p>Please include your display ID (found in Settings > Subscription).</p>
+        <p>We will process your request within <strong>7 business days</strong> and permanently delete:</p>
+        <ul>
+          <li>Your user record (linking key, display ID)</li>
+          <li>All payment records</li>
+          <li>Subscription data</li>
+          <li>Support tickets (if any)</li>
+        </ul>
+      </div>
+
+      <h2>Data Retained After Deletion</h2>
+      <div class="card">
+        <p>After account deletion, no personally identifiable data is retained. Anonymous, aggregated analytics data (crash reports via Sentry) may be retained for service improvement but cannot be linked to your account.</p>
+      </div>
+    </div>
+
+    <div id="content-ko" style="display:none">
+      <h1>계정 및 데이터 삭제</h1>
+
+      <h2>SYBA의 데이터 저장 방식</h2>
+      <div class="card">
+        <p>SYBA는 <strong>프라이버시 우선</strong> 앱입니다. 모든 금융 데이터(자산, 기록, 대출, 카드, 스냅샷)는 비밀번호로 암호화되어 <strong>기기에만 로컬 저장</strong>됩니다.</p>
+        <p>서버에는 구독 관련 최소 데이터만 저장됩니다: Lightning 공개키(linking_key), 구독 상태, 결제 이력.</p>
+      </div>
+
+      <h2>로컬 앱 데이터 삭제</h2>
+      <div class="card">
+        <p>기기에 저장된 모든 데이터를 삭제하려면:</p>
+        <div class="step"><div class="step-num">1</div><p>SYBA 앱 열기</p></div>
+        <div class="step"><div class="step-num">2</div><p><strong>설정</strong> 탭으로 이동</p></div>
+        <div class="step"><div class="step-num">3</div><p><strong>데이터 관리</strong> 선택</p></div>
+        <div class="step"><div class="step-num">4</div><p><strong>앱 데이터 초기화</strong> 선택</p></div>
+        <p>자산, 기록, 대출, 카드, 스냅샷이 영구 삭제됩니다. 비밀번호와 앱 설정은 유지됩니다.</p>
+        <div class="note"><p>앱을 삭제(언인스톨)해도 모든 데이터가 기기에서 제거됩니다.</p></div>
+      </div>
+
+      <h2>서버 계정 삭제</h2>
+      <div class="card">
+        <p>서버에 저장된 계정 및 모든 관련 데이터(구독 기록, 결제 이력, linking key)를 삭제하려면:</p>
+        <p><a href="mailto:syba.sats@gmail.com" style="color:#F7931A">syba.sats@gmail.com</a>으로 제목 <strong>"계정 삭제 요청"</strong>으로 이메일을 보내주세요.</p>
+        <p>설정 > 구독에서 확인할 수 있는 디스플레이 ID를 포함해주세요.</p>
+        <p><strong>영업일 기준 7일 이내</strong>에 다음 데이터를 영구 삭제합니다:</p>
+        <ul>
+          <li>사용자 기록 (linking key, display ID)</li>
+          <li>모든 결제 기록</li>
+          <li>구독 데이터</li>
+          <li>고객 지원 티켓 (있는 경우)</li>
+        </ul>
+      </div>
+
+      <h2>삭제 후 보관되는 데이터</h2>
+      <div class="card">
+        <p>계정 삭제 후 개인 식별 가능한 데이터는 보관되지 않습니다. 익명화된 분석 데이터(Sentry 오류 보고서)는 서비스 개선을 위해 보관될 수 있으나 계정과 연결할 수 없습니다.</p>
+      </div>
+    </div>
+
+    <div id="content-es" style="display:none">
+      <h1>Eliminación de cuenta y datos</h1>
+
+      <h2>Cómo SYBA almacena tus datos</h2>
+      <div class="card">
+        <p>SYBA es una app que prioriza la <strong>privacidad</strong>. Todos tus datos financieros (activos, registros, préstamos, tarjetas, snapshots) se almacenan <strong>solo localmente en tu dispositivo</strong>, encriptados con tu contraseña.</p>
+        <p>Nuestro servidor solo almacena datos mínimos de suscripción: tu clave pública Lightning (linking_key), estado de suscripción e historial de pagos.</p>
+      </div>
+
+      <h2>Eliminar datos locales de la app</h2>
+      <div class="card">
+        <p>Para eliminar todos los datos almacenados en tu dispositivo:</p>
+        <div class="step"><div class="step-num">1</div><p>Abrí SYBA</p></div>
+        <div class="step"><div class="step-num">2</div><p>Andá a la pestaña <strong>Configuración</strong></p></div>
+        <div class="step"><div class="step-num">3</div><p>Tocá <strong>Gestión de datos</strong></p></div>
+        <div class="step"><div class="step-num">4</div><p>Tocá <strong>Resetear datos de la app</strong></p></div>
+        <p>Esto elimina permanentemente activos, registros, préstamos, tarjetas y snapshots. Tu contraseña y configuración se mantienen.</p>
+        <div class="note"><p>También podés desinstalar la app para eliminar todos los datos del dispositivo.</p></div>
+      </div>
+
+      <h2>Eliminar cuenta del servidor</h2>
+      <div class="card">
+        <p>Para eliminar tu cuenta del servidor y todos los datos asociados (registros de suscripción, historial de pagos, linking key):</p>
+        <p>Enviá un email a <a href="mailto:syba.sats@gmail.com" style="color:#F7931A">syba.sats@gmail.com</a> con el asunto <strong>"Solicitud de eliminación de cuenta"</strong>.</p>
+        <p>Incluí tu display ID (lo encontrás en Configuración > Suscripción).</p>
+        <p>Procesaremos tu solicitud en un plazo de <strong>7 días hábiles</strong> y eliminaremos permanentemente:</p>
+        <ul>
+          <li>Tu registro de usuario (linking key, display ID)</li>
+          <li>Todos los registros de pago</li>
+          <li>Datos de suscripción</li>
+          <li>Tickets de soporte (si hay)</li>
+        </ul>
+      </div>
+
+      <h2>Datos retenidos después de la eliminación</h2>
+      <div class="card">
+        <p>Después de la eliminación de la cuenta, no se retienen datos de identificación personal. Los datos analíticos anónimos (informes de errores vía Sentry) pueden retenerse para mejorar el servicio, pero no pueden vincularse a tu cuenta.</p>
+      </div>
+    </div>
+
+    <div id="content-ja" style="display:none">
+      <h1>アカウントとデータの削除</h1>
+
+      <h2>SYBAのデータ保存方法</h2>
+      <div class="card">
+        <p>SYBAは<strong>プライバシー優先</strong>のアプリです。すべての金融データ（資産、記録、ローン、カード、スナップショット）はパスワードで暗号化され、<strong>端末にのみローカル保存</strong>されます。</p>
+        <p>サーバーにはサブスクリプション関連の最小限のデータのみ保存されます：Lightning公開鍵（linking_key）、サブスクリプション状態、支払い履歴。</p>
+      </div>
+
+      <h2>ローカルアプリデータの削除</h2>
+      <div class="card">
+        <p>端末に保存されたすべてのデータを削除するには：</p>
+        <div class="step"><div class="step-num">1</div><p>SYBAアプリを開く</p></div>
+        <div class="step"><div class="step-num">2</div><p><strong>設定</strong>タブに移動</p></div>
+        <div class="step"><div class="step-num">3</div><p><strong>データ管理</strong>をタップ</p></div>
+        <div class="step"><div class="step-num">4</div><p><strong>アプリデータ初期化</strong>をタップ</p></div>
+        <p>資産、記録、ローン、カード、スナップショットが完全に削除されます。パスワードとアプリ設定は保持されます。</p>
+        <div class="note"><p>アプリをアンインストールしても、端末からすべてのデータが削除されます。</p></div>
+      </div>
+
+      <h2>サーバーアカウントの削除</h2>
+      <div class="card">
+        <p>サーバー上のアカウントと関連データ（サブスクリプション記録、支払い履歴、linking key）を削除するには：</p>
+        <p><a href="mailto:syba.sats@gmail.com" style="color:#F7931A">syba.sats@gmail.com</a>に件名<strong>「アカウント削除リクエスト」</strong>でメールをお送りください。</p>
+        <p>設定 > サブスクリプションで確認できるディスプレイIDを記載してください。</p>
+        <p><strong>7営業日以内</strong>に以下のデータを完全に削除します：</p>
+        <ul>
+          <li>ユーザー記録（linking key、display ID）</li>
+          <li>すべての支払い記録</li>
+          <li>サブスクリプションデータ</li>
+          <li>サポートチケット（ある場合）</li>
+        </ul>
+      </div>
+
+      <h2>削除後に保持されるデータ</h2>
+      <div class="card">
+        <p>アカウント削除後、個人を特定できるデータは保持されません。匿名化された分析データ（Sentryによるエラーレポート）はサービス改善のために保持される場合がありますが、アカウントと紐付けることはできません。</p>
+      </div>
+    </div>
+
+    <div class="contact">
+      <p>Contact: <a href="mailto:syba.sats@gmail.com">syba.sats@gmail.com</a></p>
+    </div>
+  </div>
+
+  <script>
+    function setLang(lang) {
+      ['en','ko','es','ja'].forEach(l => {
+        document.getElementById('content-' + l).style.display = l === lang ? 'block' : 'none';
+      });
+      document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.includes(
+          lang === 'en' ? 'English' : lang === 'ko' ? '한국어' : lang === 'es' ? 'Español' : '日本語'
+        ));
+      });
+    }
+    // URL 파라미터로 언어 자동 설정
+    const params = new URLSearchParams(window.location.search);
+    const langParam = params.get('lang');
+    if (langParam && ['en','ko','es','ja'].includes(langParam)) setLang(langParam);
+  </script>
+</body>
+</html>
